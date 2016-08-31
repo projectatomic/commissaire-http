@@ -17,16 +17,10 @@
 Prototype http server.
 """
 
-
-from wsgiref.simple_server import WSGIServer, make_server
-from socketserver import ThreadingMixIn
-
 from kombu import Exchange
-
-# See https://gist.github.com/ashcrow/ecb611337dba966c4255697e6c0a204d
 from commissaire_http.dispatcher import Dispatcher
 from commissaire_http.topicrouter import TopicRouter
-# ---
+from commissaire_http import CommissaireHttpServer
 
 # Make a topic router that takes in "handler"s.
 mapper = TopicRouter()
@@ -37,21 +31,8 @@ mapper.register(
 # Create the dispatcher
 dispatcher = Dispatcher(mapper, Exchange('commissaire', type='direct'))
 
-
-class ThreadedWSGIServer(ThreadingMixIn, WSGIServer):
-    """
-    Threaded version of the WSIServer
-    """
-    pass
-
-
 try:
-    httpd = make_server(
-        '127.0.0.1',
-        8000,
-        dispatcher.dispatch, server_class=ThreadedWSGIServer)
-    print('---\nMake sure redis and clusterservice is running and'
-          ' head to http://127.0.0.1:8000/api/v0/clusters/\n---')
-    httpd.serve_forever()
+    server = CommissaireHttpServer('127.0.0.1', 8000, dispatcher)
+    server.serve_forever()
 except KeyboardInterrupt:
     pass
