@@ -19,6 +19,7 @@ Prototype dispatcher.
 import logging
 import uuid
 
+from queue import Empty
 from kombu import Connection, Producer
 
 # NOTE: Only added for this example
@@ -89,7 +90,14 @@ class Dispatcher:
                 'Message sent to {0}. Want {1}.'.format(
                     route['topic'], response_queue_name))
             # Get the resulting message back
-            msg = response_queue.get(block=True, timeout=1)
+            try:
+                msg = response_queue.get(block=True, timeout=1)
+            except Empty:
+                # No response before the timeout
+                start_response(
+                    '502 Bad Gateway', [('content-type', 'text/html')])
+                return [bytes('Bad Gateway', 'utf8')]
+
             msg.ack()
             response_queue.clear()
             response_queue.close()
@@ -103,6 +111,12 @@ class Dispatcher:
                 start_response(
                     '200 OK', [('content-type', 'application/json')])
                 return [bytes(msg.payload, 'utf8')]
+            elif msg.properties.get('outcome') == 'no_data':
+                self.logger.debug(
+                    'Got a no_data. Returning the payload to HTTP.')
+                start_response(
+                    '404 Not Found', [('content-type', 'application/json')])
+                return [bytes(msg.payload, 'utf8')]
             # TODO: More outcome checks turning responses to HTTP ...
             # If we have an unknown or missing outcome default to ISE
             else:
@@ -114,7 +128,7 @@ class Dispatcher:
                     [('content-type', 'text/html')])
                 return [bytes('Internal Server Error', 'utf8')]
 
-        # Otherwise handle it as a 404
+        # Otherwise handle it as a generic 404
         start_response('404 Not Found', [('content-type', 'text/html')])
         return [bytes('Not Found', 'utf8')]
 
