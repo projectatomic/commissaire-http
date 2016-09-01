@@ -146,7 +146,7 @@ if __name__ == '__main__':
         'http.{handler}')
 
     # Create the dispatcher
-    exchange = Exchange('commissaire', type='direct')
+    exchange = Exchange('commissaire', type='topic')
     d = Dispatcher(mapper, exchange)
 
     # Fake WSGI start_response
