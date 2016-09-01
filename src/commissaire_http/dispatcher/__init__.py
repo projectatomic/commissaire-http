@@ -16,6 +16,7 @@
 Prototype dispatcher.
 """
 
+import json
 import logging
 import uuid
 
@@ -83,7 +84,7 @@ class Dispatcher:
                 queue_opts={'auto_delete': True, 'durable': False})
             # Generate a message and sent it off
             self.producer.publish(
-                'An HTTP Request',
+                {'action': 'list', 'args': {}},
                 route['topic'],
                 reply_to=response_queue_name)
             self.logger.debug(
@@ -110,13 +111,13 @@ class Dispatcher:
                     'Got a success. Returning the payload to HTTP.')
                 start_response(
                     '200 OK', [('content-type', 'application/json')])
-                return [bytes(msg.payload, 'utf8')]
+                return [bytes(json.dumps(msg.payload), 'utf8')]
             elif msg.properties.get('outcome') == 'no_data':
                 self.logger.debug(
                     'Got a no_data. Returning the payload to HTTP.')
                 start_response(
                     '404 Not Found', [('content-type', 'application/json')])
-                return [bytes(msg.payload, 'utf8')]
+                return [bytes(json.dumps(msg.payload), 'utf8')]
             # TODO: More outcome checks turning responses to HTTP ...
             # If we have an unknown or missing outcome default to ISE
             else:
