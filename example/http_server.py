@@ -17,7 +17,6 @@
 Prototype http server.
 """
 
-from kombu import Exchange
 from commissaire_http.dispatcher import Dispatcher
 from commissaire_http.topicrouter import TopicRouter
 from commissaire_http import CommissaireHttpServer
@@ -26,10 +25,13 @@ from commissaire_http import CommissaireHttpServer
 mapper = TopicRouter()
 mapper.register(
     '^/api/v0/(?P<handler>[a-z]*)/?$',
-    'http.{handler}')
+    'http.{handler}.list')
 
-# Create the dispatcher
-dispatcher = Dispatcher(mapper, Exchange('commissaire', type='direct'))
+dispatcher = Dispatcher(
+    mapper,
+    'commissaire',
+    'redis://127.0.0.1:6379/'
+)
 
 try:
     server = CommissaireHttpServer('127.0.0.1', 8000, dispatcher)

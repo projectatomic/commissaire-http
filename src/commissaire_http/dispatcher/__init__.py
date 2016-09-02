@@ -21,7 +21,7 @@ import logging
 import uuid
 
 from queue import Empty
-from kombu import Connection, Producer
+from kombu import Connection, Exchange, Producer
 
 # NOTE: Only added for this example
 logger = logging.getLogger('Dispatcher')
@@ -40,7 +40,7 @@ class Dispatcher:
     #: Logging instance for all Dispatchers
     logger = logging.getLogger('Router')
 
-    def __init__(self, router, exchange):
+    def __init__(self, router, exchange_name, connection_url):
         """
         Initializes a new Dispatcher instance.
 
@@ -50,13 +50,18 @@ class Dispatcher:
 
         :param router: The router to dispatch with.
         :type router: router.TopicRouter
-        :param connection: A kombu Exchange.
-        :type connection: kombu.Exchange
+        :param exchange_name: Name of the topic exchange.
+        :type exchange_name: str
+        :param connection_url: Kombu connection url.
+        :type connection_url: str
         """
         self._router = router
-        self._bus = Connection('redis://localhost:6379/')
-        self._exchange = exchange
-        self.producer = Producer(self._bus.channel(), exchange)
+        self._connection = Connection(connection_url)
+        self._channel = self._connection.channel()
+        self._exchange = Exchange(
+            exchange_name, 'topic').bind(self._channel)
+        self._exchange.declare()
+        self.producer = Producer(self._channel, self._exchange)
 
     def dispatch(self, environ, start_response):
         """
@@ -79,16 +84,17 @@ class Dispatcher:
         # If we have a valid route
         if route:
             response_queue_name = 'response-{0}'.format(uuid.uuid4())
-            response_queue = self._bus.SimpleQueue(
+            response_queue = self._connection.SimpleQueue(
                 response_queue_name,
                 queue_opts={'auto_delete': True, 'durable': False})
             # Generate a message and sent it off
             self.producer.publish(
-                {'action': 'list', 'args': {}},
+                {'args': {}},
                 route['topic'],
+                declare=[self._exchange],
                 reply_to=response_queue_name)
             self.logger.debug(
-                'Message sent to {0}. Want {1}.'.format(
+                'Message sent to "{0}". Want response on "{1}".'.format(
                     route['topic'], response_queue_name))
             # Get the resulting message back
             try:
@@ -132,36 +138,3 @@ class Dispatcher:
         # Otherwise handle it as a generic 404
         start_response('404 Not Found', [('content-type', 'text/html')])
         return [bytes('Not Found', 'utf8')]
-
-
-if __name__ == '__main__':
-    from kombu import Exchange
-    # See https://gist.github.com/ashcrow/ecb611337dba966c4255697e6c0a204d
-    from topicrouter import TopicRouter
-
-    # Make a topic router that takes in "handler"s.
-    mapper = TopicRouter()
-    mapper.register(
-        '^/api/v0/(?P<handler>[a-z]*)/?$',
-        'http.{handler}')
-
-    # Create the dispatcher
-    exchange = Exchange('commissaire', type='topic')
-    d = Dispatcher(mapper, exchange)
-
-    # Fake WSGI start_response
-    def start_response(code, properties):
-        logger.debug('start_response("{0}",{1})'.format(code, properties))
-
-    print('\n====> I WILL 404')
-    print('HTTP BODY: {0}'.format(
-        d.dispatch({
-            'PATH_INFO': '/idonotexist',
-            'REQUEST_METHOD': 'GET'},
-            start_response)))
-    print('\n====> I WILL WORK')
-    print('HTTP BODY: {0}'.format(
-        d.dispatch({
-            'PATH_INFO': '/api/v0/clusters/',
-            'REQUEST_METHOD': 'GET'},
-            start_response)))
