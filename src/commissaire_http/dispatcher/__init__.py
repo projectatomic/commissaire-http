@@ -83,13 +83,20 @@ class Dispatcher:
             environ['PATH_INFO'], environ['REQUEST_METHOD'])
         # If we have a valid route
         if route:
-            response_queue_name = 'response-{0}'.format(uuid.uuid4())
+            id = str(uuid.uuid4())
+            response_queue_name = 'response-{0}'.format(id)
             response_queue = self._connection.SimpleQueue(
                 response_queue_name,
                 queue_opts={'auto_delete': True, 'durable': False})
+            jsonrpc_msg = {
+                'jsonrpc': '2.0',
+                'id': id,
+                'method': 'list',
+                'params': {},
+            }
             # Generate a message and sent it off
             self.producer.publish(
-                {'args': {}},
+                jsonrpc_msg,
                 route['topic'],
                 declare=[self._exchange],
                 reply_to=response_queue_name)
@@ -111,25 +118,25 @@ class Dispatcher:
             self.logger.debug(
                 'Received: properties="{0}", payload="{1}"'.format(
                     msg.properties, msg.payload))
-            # And handle the message based on it's outcome
-            if msg.properties.get('outcome') == 'success':
+            # And handle the message based on it's keys
+            if 'result' in msg.payload.keys():
                 self.logger.debug(
                     'Got a success. Returning the payload to HTTP.')
                 start_response(
                     '200 OK', [('content-type', 'application/json')])
-                return [bytes(json.dumps(msg.payload), 'utf8')]
-            elif msg.properties.get('outcome') == 'no_data':
-                self.logger.debug(
-                    'Got a no_data. Returning the payload to HTTP.')
-                start_response(
-                    '404 Not Found', [('content-type', 'application/json')])
-                return [bytes(json.dumps(msg.payload), 'utf8')]
+                return [bytes(json.dumps(msg.payload['result']), 'utf8')]
+            # elif msg.properties.get('outcome') == 'no_data':
+            #     self.logger.debug(
+            #         'Got a no_data. Returning the payload to HTTP.')
+            #     start_response(
+            #         '404 Not Found', [('content-type', 'application/json')])
+            #     return [bytes(json.dumps(msg.payload), 'utf8')]
             # TODO: More outcome checks turning responses to HTTP ...
             # If we have an unknown or missing outcome default to ISE
             else:
                 self.logger.error(
-                    'Unknown outcome: {0}. properties={1}'.format(
-                        msg.properties, msg.payload))
+                    'Unexpected result for message id "{}". "{}"}'.format(
+                        id, msg.payload))
                 start_response(
                     '500 Internal Server Error',
                     [('content-type', 'text/html')])
