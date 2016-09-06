@@ -80,7 +80,7 @@ class Dispatcher:
            This prototype is using WSGI but other interfaces could be used.
         """
         route = self._router.match(
-            environ['PATH_INFO'], environ['REQUEST_METHOD'])
+            environ['PATH_INFO'], environ)
         # If we have a valid route
         if route:
             id = str(uuid.uuid4())
@@ -94,6 +94,7 @@ class Dispatcher:
                 'method': 'list',
                 'params': {},
             }
+
             # Generate a message and sent it off
             self.producer.publish(
                 jsonrpc_msg,

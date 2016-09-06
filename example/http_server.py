@@ -18,14 +18,15 @@ Prototype http server.
 """
 
 from commissaire_http.dispatcher import Dispatcher
-from commissaire_http.topicrouter import TopicRouter
+from commissaire_http.router import Router
 from commissaire_http import CommissaireHttpServer
 
-# Make a topic router that takes in "handler"s.
-mapper = TopicRouter()
-mapper.register(
-    '^/api/v0/(?P<handler>[a-z]*)/?$',
-    'http.{handler}.list')
+# Make a router that takes in "handler"s.
+mapper = Router()
+mapper.connect(
+    R'/api/v0/{handler:[a-z]*}/',
+    topic='http.{handler}.list',
+    conditions={'method': 'GET'})
 
 dispatcher = Dispatcher(
     mapper,
