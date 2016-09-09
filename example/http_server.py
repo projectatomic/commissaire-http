@@ -17,22 +17,43 @@
 Prototype http server.
 """
 
+import logging
+
 from commissaire_http.dispatcher import Dispatcher
 from commissaire_http.router import Router
 from commissaire_http import CommissaireHttpServer
 
+# NOTE: Only added for this example
+logger = logging.getLogger('Dispatcher')
+logger.setLevel(logging.DEBUG)
+handler = logging.StreamHandler()
+handler.setFormatter(logging.Formatter('%(name)s(%(levelname)s): %(message)s'))
+logger.handlers.append(handler)
+
+r = logging.getLogger('Router')
+r.setLevel(logging.DEBUG)
+handler = logging.StreamHandler()
+handler.setFormatter(logging.Formatter('%(name)s(%(levelname)s): %(message)s'))
+r.handlers.append(handler)
+# --
+
+
 # Make a router that takes in "handler"s.
 mapper = Router()
 mapper.connect(
-    R'/api/v0/{handler:[a-z]*}/',
-    topic='http.{handler}.list',
+    R'/hello/',
+    controller='commissaire_http.handlers.hello_world',
+    conditions={'method': 'GET'})
+mapper.connect(
+    R'/world/',
+    controller='commissaire_http.handlers.create_world',
+    conditions={'method': 'PUT'})
+mapper.connect(
+    R'/hello_class/',
+    controller='commissaire_http.handlers.ClassHandlerExample.hello',
     conditions={'method': 'GET'})
 
-dispatcher = Dispatcher(
-    mapper,
-    'commissaire',
-    'redis://127.0.0.1:6379/'
-)
+dispatcher = Dispatcher(mapper, handler_packages=['commissaire_http.handlers'])
 
 try:
     server = CommissaireHttpServer('127.0.0.1', 8000, dispatcher)

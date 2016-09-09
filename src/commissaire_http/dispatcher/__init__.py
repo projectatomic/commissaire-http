@@ -20,16 +20,47 @@ import json
 import logging
 import uuid
 
-from queue import Empty
-from kombu import Connection, Exchange, Producer
+from html import escape
+from importlib import import_module
+from inspect import signature, isfunction, isclass
+from urllib.parse import parse_qs
 
-# NOTE: Only added for this example
-logger = logging.getLogger('Dispatcher')
-logger.setLevel(logging.DEBUG)
-handler = logging.StreamHandler()
-handler.setFormatter(logging.Formatter('%(name)s(%(levelname)s): %(message)s'))
-logger.handlers.append(handler)
-# --
+
+def parse_query_string(qs):
+    """
+    Parses a query string into parameters.
+
+    :param qs: A query string.
+    :type qs: str
+    :returns: A dictionary of parameters.
+    :rtype: dict
+    """
+    new_qs = {}
+    for key, value in parse_qs(qs).items():
+        if len(value) == 1:
+            new_qs[key] = escape(value[0])
+        else:
+            new_qs[key] = value
+    return new_qs
+
+
+def ls_mod(mod, pkg):
+    """
+    Yields all non internal/protected attributes in a module.
+
+    :param mod: The module itself.
+    :type mod:
+    :param pkg: The full package name.
+    :type pkg: str
+    :returns: Tuple of attribute name, attribute, attribute path.
+    :rtype: tuple
+    """
+    for item in dir(mod):
+        # Skip all protected and internals
+        if not item.startswith('_'):
+            attr = getattr(mod, item)
+            mod_path = '.'.join([pkg, item])
+            yield item, attr, mod_path
 
 
 class Dispatcher:
@@ -38,9 +69,9 @@ class Dispatcher:
     """
 
     #: Logging instance for all Dispatchers
-    logger = logging.getLogger('Router')
+    logger = logging.getLogger('Dispatcher')
 
-    def __init__(self, router, exchange_name, connection_url):
+    def __init__(self, router, handler_packages):
         """
         Initializes a new Dispatcher instance.
 
@@ -50,23 +81,53 @@ class Dispatcher:
 
         :param router: The router to dispatch with.
         :type router: router.TopicRouter
-        :param exchange_name: Name of the topic exchange.
-        :type exchange_name: str
-        :param connection_url: Kombu connection url.
-        :type connection_url: str
+        :param handler_packages: List of packages to load handlers from.
+        :type handler_packages: list
         """
         self._router = router
-        self._connection = Connection(connection_url)
-        self._channel = self._connection.channel()
-        self._exchange = Exchange(
-            exchange_name, 'topic').bind(self._channel)
-        self._exchange.declare()
-        self.producer = Producer(self._channel, self._exchange)
+        self._handler_packages = handler_packages
+        self._handler_map = {}
+        self.reload_handlers()
+
+    def reload_handlers(self):
+        """
+        Reloads the handler mapping.
+        """
+        for pkg in self._handler_packages:
+            try:
+                mod = import_module(pkg)
+                for item, attr, mod_path in ls_mod(mod, pkg):
+                    if isfunction(attr):
+                        # Check that it has 1 input
+                        if len(signature(attr).parameters) == 1:
+                            self._handler_map[mod_path] = attr
+                            self.logger.info(
+                                'Loaded function handler {} to {}'.format(
+                                    mod_path, attr))
+                    elif isclass(attr) and issubclass(attr, object):
+                        handler_instance = attr()
+                        for handler_meth, sub_attr, sub_mod_path in \
+                                ls_mod(handler_instance, pkg):
+                            key = '.'.join([mod_path, handler_meth])
+                            self._handler_map[key] = getattr(
+                                handler_instance, handler_meth)
+                            self.logger.info(
+                                'Instansiated and loaded class handler '
+                                '{} to {}'.format(key, handler_instance))
+                    else:
+                        self.logger.debug(
+                            '{} can not be used as a handler.'.format(
+                                mod_path))
+            except ImportError as error:
+                self.logger.error(
+                    'Unable to import handler package "{}". {}: {}'.format(
+                        pkg, type(error), error))
 
     def dispatch(self, environ, start_response):
         """
-        Dispatches an HTTP request into a bus message, translates the results
-        and returns the HTTP response back to the requestor.
+        Dispatches an HTTP request into a jsonrpc message, passes it to a
+        handler, translates the results, and returns the HTTP response back
+        to the requestor.
 
         :param environ: WSGI environment dictionary.
         :type environ: dict
@@ -79,65 +140,52 @@ class Dispatcher:
 
            This prototype is using WSGI but other interfaces could be used.
         """
-        route = self._router.match(
-            environ['PATH_INFO'], environ)
+        route = self._router.match(environ['PATH_INFO'], environ)
         # If we have a valid route
+        params = {}
         if route:
-            id = str(uuid.uuid4())
-            response_queue_name = 'response-{0}'.format(id)
-            response_queue = self._connection.SimpleQueue(
-                response_queue_name,
-                queue_opts={'auto_delete': True, 'durable': False})
+            # If we are a PUT or POST look for params in wsgi.input
+            if environ['REQUEST_METHOD'] in ('PUT', 'POST'):
+                if environ.get('CONTENT_LENGTH') and environ['CONTENT_LENGTH']:
+                    try:
+                        params = json.loads(environ['wsgi.input'].read(
+                            int(environ['CONTENT_LENGTH'])).decode())
+                    except json.decoder.JSONDecodeError as error:
+                        self.logger.debug(
+                            'Unable to read "wsgi.input": {}'.format(error))
+            else:
+                params = parse_query_string(environ['QUERY_STRING'])
+
+            # method is normally supposed to be the method to be called
+            # but we hijack it for the method that was used over HTTP
             jsonrpc_msg = {
                 'jsonrpc': '2.0',
-                'id': id,
-                'method': 'list',
-                'params': {},
+                'id': str(uuid.uuid4()),
+                'method': environ['REQUEST_METHOD'],
+                'params': params,
             }
 
-            # Generate a message and sent it off
-            self.producer.publish(
-                jsonrpc_msg,
-                route['topic'],
-                declare=[self._exchange],
-                reply_to=response_queue_name)
             self.logger.debug(
-                'Message sent to "{0}". Want response on "{1}".'.format(
-                    route['topic'], response_queue_name))
+                'Request transformed to "{}".'.format(jsonrpc_msg))
             # Get the resulting message back
             try:
-                msg = response_queue.get(block=True, timeout=1)
-            except Empty:
-                # No response before the timeout
-                start_response(
-                    '502 Bad Gateway', [('content-type', 'text/html')])
-                return [bytes('Bad Gateway', 'utf8')]
-
-            msg.ack()
-            response_queue.clear()
-            response_queue.close()
-            self.logger.debug(
-                'Received: properties="{0}", payload="{1}"'.format(
-                    msg.properties, msg.payload))
-            # And handle the message based on it's keys
-            if 'result' in msg.payload.keys():
+                handler = self._handler_map.get(route['controller'])
+                self.logger.debug('Using controller {}->{}'.format(
+                    route, handler))
+                result = handler(jsonrpc_msg)
                 self.logger.debug(
-                    'Got a success. Returning the payload to HTTP.')
-                start_response(
-                    '200 OK', [('content-type', 'application/json')])
-                return [bytes(json.dumps(msg.payload['result']), 'utf8')]
-            # elif msg.properties.get('outcome') == 'no_data':
-            #     self.logger.debug(
-            #         'Got a no_data. Returning the payload to HTTP.')
-            #     start_response(
-            #         '404 Not Found', [('content-type', 'application/json')])
-            #     return [bytes(json.dumps(msg.payload), 'utf8')]
-            # TODO: More outcome checks turning responses to HTTP ...
-            # If we have an unknown or missing outcome default to ISE
-            else:
+                    'Handler {} returned "{}"'.format(
+                        route['controller'], result))
+                if 'error' in result.keys():
+                    raise Exception(result['error'])
+                elif 'result' in result.keys():
+                    start_response(
+                        '200 OK', [('content-type', 'application/json')])
+                    return [bytes(json.dumps(result['result']), 'utf8')]
+            except Exception as error:
                 self.logger.error(
-                    'Unexpected result for message id "{}". "{}"}'.format(
-                        id, msg.payload))
+                    'Exception raised while {} handled "{}". {}: {}'.format(
+                        route['controller'], jsonrpc_msg, type(error), error))
                 start_response(
                     '500 Internal Server Error',
                     [('content-type', 'text/html')])

@@ -21,14 +21,6 @@ import logging
 
 import routes
 
-# NOTE: Only added for this example
-r = logging.getLogger('Router')
-r.setLevel(logging.DEBUG)
-handler = logging.StreamHandler()
-handler.setFormatter(logging.Formatter('%(name)s(%(levelname)s): %(message)s'))
-r.handlers.append(handler)
-# --
-
 
 class Router(routes.Mapper):
     """
