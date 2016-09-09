@@ -48,10 +48,4 @@ class Router(routes.Mapper):
                 args, kwargs))
         result = super(Router, self).match(*args, **kwargs)
         self.logger.debug('Router result: {}'.format(result))
-
-        if result and result.get('topic'):
-            topic = result['topic'].format(**result)
-            self.logger.info('Found a topic. Routing to {}'.format(topic))
-            result['topic'] = topic
-        self.logger.debug('End result: {}'.format(result))
         return result

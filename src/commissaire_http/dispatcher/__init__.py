@@ -40,7 +40,10 @@ def parse_query_string(qs):
         if len(value) == 1:
             new_qs[key] = escape(value[0])
         else:
-            new_qs[key] = value
+            new_value = []
+            for item in value:
+                new_value.append(escape(item))
+            new_qs[key] = new_value
     return new_qs
 
 
@@ -154,7 +157,7 @@ class Dispatcher:
                         self.logger.debug(
                             'Unable to read "wsgi.input": {}'.format(error))
             else:
-                params = parse_query_string(environ['QUERY_STRING'])
+                params = parse_query_string(environ.get('QUERY_STRING'))
 
             # method is normally supposed to be the method to be called
             # but we hijack it for the method that was used over HTTP

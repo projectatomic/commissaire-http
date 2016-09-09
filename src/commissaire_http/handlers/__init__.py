@@ -37,13 +37,16 @@ def create_response(id, result=None, error=None):
     if result:
         jsonrpc_response['result'] = result
     elif error:
-        jsonrpc_response['error'] = error
+        jsonrpc_response['error'] = {
+            'code': -32603,  # Default to Internal Error
+            'message': error,
+        }
     else:
         raise TypeError('Either a result or error is required.')
     return jsonrpc_response
 
 
-def hello_world(message):
+def hello_world(message):  # pragma: no cover
     """
     Example function handler that simply says hello. If name is given
     in the query string it uses it.
@@ -59,7 +62,7 @@ def hello_world(message):
     return create_response(message['id'], response_msg)
 
 
-def create_world(message):
+def create_world(message):  # pragma: no cover
     """
     Example function handler that simply says hello. If name is given
     in the query string it uses it.
@@ -82,7 +85,7 @@ def create_world(message):
         raise error
 
 
-class ClassHandlerExample:
+class ClassHandlerExample:  # pragma: no cover
     """
     Example class based handlers.
     """
