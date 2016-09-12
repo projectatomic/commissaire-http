@@ -46,7 +46,7 @@ def create_response(id, result=None, error=None):
     return jsonrpc_response
 
 
-def hello_world(message):  # pragma: no cover
+def hello_world(message, bus):  # pragma: no cover
     """
     Example function handler that simply says hello. If name is given
     in the query string it uses it.
@@ -57,12 +57,14 @@ def hello_world(message):  # pragma: no cover
     :rtype: dict
     """
     response_msg = {'Hello': 'there'}
+    # Example of using the bus ...
+    # print(bus.request('simple.add', 'add', params=[10, 20]))
     if message['params'].get('name'):
         response_msg['Hello'] = message['params']['name']
     return create_response(message['id'], response_msg)
 
 
-def create_world(message):  # pragma: no cover
+def create_world(message, bus):  # pragma: no cover
     """
     Example function handler that simply says hello. If name is given
     in the query string it uses it.
@@ -90,7 +92,7 @@ class ClassHandlerExample:  # pragma: no cover
     Example class based handlers.
     """
 
-    def hello(self, message):
+    def hello(self, message, bus):
         """
         Example method handler that simply says hello. If name is given
         in the query string it uses it.
@@ -100,4 +102,4 @@ class ClassHandlerExample:  # pragma: no cover
         :returns: A jsonrpc structure.
         :rtype: dict
         """
-        return hello_world(message)
+        return hello_world(message, bus)

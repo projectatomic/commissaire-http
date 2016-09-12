@@ -19,8 +19,10 @@ Prototype http server.
 
 import logging
 
-from wsgiref.simple_server import WSGIServer, make_server
+from wsgiref.simple_server import WSGIServer, WSGIRequestHandler, make_server
 from socketserver import ThreadingMixIn
+
+from commissaire_http.bus import Bus
 
 
 class ThreadedWSGIServer(ThreadingMixIn, WSGIServer):
@@ -30,25 +32,39 @@ class ThreadedWSGIServer(ThreadingMixIn, WSGIServer):
     pass
 
 
+class CommissaireRequestHandler(WSGIRequestHandler):
+    """
+    Commissaire version of the WSGIRequestHandler.
+    """
+    #: The version of the server
+    server_version = 'Commissaire/0.0.2'
+
+
 class CommissaireHttpServer:
     """
     Http Server for Commissaire.
     """
 
+    #: Class level logger
     logger = logging.getLogger('CommissaireHttpServer')
 
     def __init__(self, bind_host, bind_port, dispatcher, tls_pem_file=None):
         """
         Initializes a new CommissaireHttpServer instance.
         """
+        # To use the bus call setup_bus()
+        self.bus = None
         self._bind_host = bind_host
         self._bind_port = bind_port
         self._tls_pem_file = tls_pem_file
+        self.dispatcher = dispatcher
         self._httpd = make_server(
             self._bind_host,
             self._bind_port,
-            dispatcher.dispatch,
-            server_class=ThreadedWSGIServer)
+            self.dispatcher.dispatch,
+            server_class=ThreadedWSGIServer,
+            handler_class=CommissaireRequestHandler)
+
         # If we are given a PEM file then wrap the socket
         if tls_pem_file:
             import ssl
@@ -61,6 +77,23 @@ class CommissaireHttpServer:
 
         self.logger.debug('Created httpd server: {}:{}'.format(
             self._bind_host, self._bind_port))
+
+    def setup_bus(self, exchange_name, connection_url, qkwargs):
+        """
+        Sets up variables needed for the bus connection.
+
+        :param exchange_name: Name of the topic exchange.
+        :type exchange_name: str
+        :param connection_url: Kombu connection url.
+        :type connection_url: str
+        :param qkwargs: One or more dicts keyword arguments for queue creation
+        :type qkwargs: list
+        """
+        self.logger.debug('Setting up bus connection.')
+        self.bus = Bus(exchange_name, connection_url, qkwargs)
+        self.bus.connect()
+        self.dispatcher._bus = self.bus
+        self.logger.info('Bus connection ready.')
 
     def serve_forever(self):
         """
