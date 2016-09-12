@@ -24,17 +24,13 @@ from commissaire_http.router import Router
 from commissaire_http import CommissaireHttpServer
 
 # NOTE: Only added for this example
-logger = logging.getLogger('Dispatcher')
-logger.setLevel(logging.DEBUG)
-handler = logging.StreamHandler()
-handler.setFormatter(logging.Formatter('%(name)s(%(levelname)s): %(message)s'))
-logger.handlers.append(handler)
-
-r = logging.getLogger('Router')
-r.setLevel(logging.DEBUG)
-handler = logging.StreamHandler()
-handler.setFormatter(logging.Formatter('%(name)s(%(levelname)s): %(message)s'))
-r.handlers.append(handler)
+for name in ('Dispatcher', 'Router', 'Bus', 'CommissaireHttpServer'):
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.DEBUG)
+    handler = logging.StreamHandler()
+    handler.setFormatter(logging.Formatter(
+        '%(name)s(%(levelname)s): %(message)s'))
+    logger.handlers.append(handler)
 # --
 
 
