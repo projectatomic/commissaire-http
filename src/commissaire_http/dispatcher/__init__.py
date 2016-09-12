@@ -25,6 +25,8 @@ from importlib import import_module
 from inspect import signature, isfunction, isclass
 from urllib.parse import parse_qs
 
+from commissaire_http.bus import Bus
+
 
 def parse_query_string(qs):
     """
@@ -78,10 +80,6 @@ class Dispatcher:
         """
         Initializes a new Dispatcher instance.
 
-        .. todo::
-
-           Make the bus connection configurable.
-
         :param router: The router to dispatch with.
         :type router: router.TopicRouter
         :param handler_packages: List of packages to load handlers from.
@@ -91,6 +89,7 @@ class Dispatcher:
         self._handler_packages = handler_packages
         self._handler_map = {}
         self.reload_handlers()
+        self._bus = None
 
     def reload_handlers(self):
         """
@@ -101,8 +100,8 @@ class Dispatcher:
                 mod = import_module(pkg)
                 for item, attr, mod_path in ls_mod(mod, pkg):
                     if isfunction(attr):
-                        # Check that it has 1 input
-                        if len(signature(attr).parameters) == 1:
+                        # Check that it has 2 inputs
+                        if len(signature(attr).parameters) == 2:
                             self._handler_map[mod_path] = attr
                             self.logger.info(
                                 'Loaded function handler {} to {}'.format(
@@ -138,12 +137,9 @@ class Dispatcher:
         :type start_response: callable
         :returns: The body of the HTTP response.
         :rtype: Mixed
-
-        .. note::
-
-           This prototype is using WSGI but other interfaces could be used.
         """
         route = self._router.match(environ['PATH_INFO'], environ)
+
         # If we have a valid route
         params = {}
         if route:
@@ -175,7 +171,13 @@ class Dispatcher:
                 handler = self._handler_map.get(route['controller'])
                 self.logger.debug('Using controller {}->{}'.format(
                     route, handler))
-                result = handler(jsonrpc_msg)
+                # Pass the message and, if needed, a new instance of the
+                # bus to the handler
+                bus = None
+                if self._bus:
+                    bus = Bus(**self._bus.init_kwargs).connect()
+
+                result = handler(jsonrpc_msg, bus=bus)
                 self.logger.debug(
                     'Handler {} returned "{}"'.format(
                         route['controller'], result))

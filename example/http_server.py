@@ -53,6 +53,10 @@ dispatcher = Dispatcher(mapper, handler_packages=['commissaire_http.handlers'])
 
 try:
     server = CommissaireHttpServer('127.0.0.1', 8000, dispatcher)
+    server.setup_bus(
+        'commissaire',
+        'redis://127.0.0.1:6379/',
+        [{'name': 'simple', 'routing_key': 'simple.*'}])
     server.serve_forever()
 except KeyboardInterrupt:
     pass

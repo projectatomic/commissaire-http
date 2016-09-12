@@ -37,7 +37,7 @@ class TestDispatcher(TestCase):
         """
         self.router_instance = Router()
         self.router_instance.connect(
-            '/path/',
+            '/hello/',
             controller='commissaire_http.handlers.hello_world',
             conditions={'method': 'GET'})
         self.router_instance.connect(
@@ -71,7 +71,7 @@ class TestDispatcher(TestCase):
         Verify the Dispatcher.dispatch works with valid paths.
         """
         environ = {
-            'PATH_INFO': '/path/',
+            'PATH_INFO': '/hello/',
             'REQUEST_METHOD': 'GET',
         }
         start_response = mock.MagicMock()
@@ -84,7 +84,7 @@ class TestDispatcher(TestCase):
         Verify the Dispatcher.dispatch works with valid paths and params.
         """
         environ = {
-            'PATH_INFO': '/path/',
+            'PATH_INFO': '/hello/',
             'REQUEST_METHOD': 'GET',
             'QUERY_STRING': 'name=bob'
         }
