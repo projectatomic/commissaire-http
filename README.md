@@ -1,2 +1,2 @@
 # commissaire-http
-Prototype Commissaire http server
+Commissaire HTTP server
