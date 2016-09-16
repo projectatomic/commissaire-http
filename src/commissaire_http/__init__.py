@@ -36,8 +36,22 @@ class CommissaireRequestHandler(WSGIRequestHandler):
     """
     Commissaire version of the WSGIRequestHandler.
     """
-    #: The version of the server
+    #: The software version of the server
     server_version = 'Commissaire/0.0.2'
+
+    def get_environ(self):
+        """
+        Override to add SSL_CLIENT_VERIFY to the env.
+
+        :returns: The WSGI environment
+        :rtype: dict
+        """
+        env = super(CommisaireRequestHandler, self).get_environ()
+        try:
+            env['SSL_CLIENT_VERIFY'] = self.request.getpeercert()
+        except:
+            env['SSL_CLIENT_VERIFY'] = None
+        return env
 
 
 class CommissaireHttpServer:
