@@ -18,6 +18,17 @@ import os
 from unittest import TestCase, mock
 
 
+def create_environ(path='/', headers={}):
+    """
+    Shortcut for creating an fake WSGI environ.
+    """
+    env = {
+        'PATH_INFO': path,
+    }
+    env.update(headers)
+    return env
+
+
 def get_fixture_file_path(filename):
     """
     Attempts to return the path to a fixture file.
