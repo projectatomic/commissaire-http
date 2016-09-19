@@ -17,12 +17,13 @@ Bus related classes and functions.
 """
 
 import logging
-import uuid
 
 from kombu import Connection, Exchange, Producer, Queue
 
+from commissaire.bus import BusMixin
 
-class Bus:
+
+class Bus(BusMixin):
     """
     Connection to a bus.
     """
@@ -92,19 +93,6 @@ class Bus:
         self.logger.debug('Bus connection finished')
         return self
 
-    # TODO: Everything under this line needs to move to a common module
-    #       shared between service and http
-
-    @classmethod
-    def create_id(cls):  # pragma: no cover
-        """
-        Creates a new unique identifier.
-
-        :returns: A unique identification string.
-        :rtype: str
-        """
-        return str(uuid.uuid4())
-
     def respond(self, queue_name, id, payload, **kwargs):  # pragma: no cover
         """
         Sends a response to a simple queue. Responses are sent back to a
@@ -130,71 +118,3 @@ class Bus:
         send_queue.put(jsonrpc_msg)
         self.logger.debug('Sent response for message id "{}"'.format(id))
         send_queue.close()
-
-    def request(self, routing_key, method, params={}, **kwargs):  # pragma: no cover # NOQA
-        """
-        Sends a request to a simple queue. Requests create the initial response
-        queue and wait for a response.
-
-        :param routing_key: The routing key to publish on.
-        :type routing_key: str
-        :param method: The remote method to request.
-        :type method: str
-        :param params: Keyword parameters to pass to the remote method.
-        :type params: dict
-        :param kwargs: Keyword arguments to pass to SimpleQueue
-        :type kwargs: dict
-        :returns: Result
-        :rtype: tuple
-        """
-        id = self.create_id()
-        response_queue_name = 'response-{}'.format(id)
-        self.logger.debug('Creating response queue "{}"'.format(
-            response_queue_name))
-        queue_opts = {
-            'auto_delete': True,
-            'durable': False,
-        }
-        if kwargs.get('queue_opts'):
-            queue_opts.update(kwargs.pop('queue_opts'))
-
-        self.logger.debug('Response queue arguments: {}'.format(kwargs))
-
-        response_queue = self.connection.SimpleQueue(
-            response_queue_name,
-            queue_opts=queue_opts,
-            **kwargs)
-
-        jsonrpc_msg = {
-            'jsonrpc': "2.0",
-            'id': id,
-            'method': method,
-            'params': params,
-        }
-        self.logger.debug('jsonrpc message for id "{}": "{}"'.format(
-            id, jsonrpc_msg))
-
-        self.producer.publish(
-            jsonrpc_msg,
-            routing_key,
-            declare=[self._exchange],
-            reply_to=response_queue_name)
-
-        self.logger.debug(
-            'Sent message id "{}" to "{}". Waiting on response...'.format(
-                id, response_queue_name))
-
-        result = response_queue.get(block=True, timeout=10)
-        result.ack()
-
-        if 'error' in result.payload.keys():
-            self.logger.warn(
-                'Error returned from the message id "{}"'.format(
-                    id, result.payload))
-
-        self.logger.debug(
-            'Result retrieved from response queue "{}": payload="{}"'.format(
-                response_queue_name, result))
-        self.logger.debug('Closing queue {}'.format(response_queue_name))
-        response_queue.close()
-        return result.payload
