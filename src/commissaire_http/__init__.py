@@ -46,7 +46,7 @@ class CommissaireRequestHandler(WSGIRequestHandler):
         :returns: The WSGI environment
         :rtype: dict
         """
-        env = super(CommisaireRequestHandler, self).get_environ()
+        env = super(CommissaireRequestHandler, self).get_environ()
         try:
             env['SSL_CLIENT_VERIFY'] = self.request.getpeercert()
         except:
