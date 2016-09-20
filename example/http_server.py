@@ -48,8 +48,16 @@ mapper.connect(
     R'/hello_class/',
     controller='commissaire_http.handlers.ClassHandlerExample.hello',
     conditions={'method': 'GET'})
+mapper.connect(
+    R'/api/v0/clusters/',
+    controller='commissaire_http.handlers.clusters.list_clusters',
+    conditions={'method': 'GET'})
 
-dispatcher = Dispatcher(mapper, handler_packages=['commissaire_http.handlers'])
+dispatcher = Dispatcher(
+    mapper,
+    handler_packages=[
+        'commissaire_http.handlers',
+        'commissaire_http.handlers.clusters'])
 
 try:
     server = CommissaireHttpServer('127.0.0.1', 8000, dispatcher)
