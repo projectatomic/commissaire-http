@@ -1,4 +1,4 @@
 kombu
 routes
 py-bcrypt
-commissaire
+git+https://github.com/projectatomic/commissaire.git
