@@ -28,13 +28,16 @@ class HTTPClientCertAuth(Authenticator):
     accepted.
     """
 
-    def __init__(self, cn=None):
+    def __init__(self, app, cn=None):
         """
         Initializes an instance of HTTPClientCertAuth.
 
+        :param app: The WSGI application being wrapped with authenticaiton.
+        :type app: callable
         :param cn: Optional CommonName to use when checking certificates.
         :type cn: str or None
         """
+        super(HTTPClientCertAuth, self).__init__(app)
         self.cn = cn
 
     def authenticate(self, environ, start_response):

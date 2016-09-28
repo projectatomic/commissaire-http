@@ -25,7 +25,7 @@ class HTTPBasicAuth(Authenticator):
     Basic auth implementation of an authenticator.
     """
 
-    def __init__(self, filepath=None, users={}):
+    def __init__(self, app, filepath=None, users={}):
         """
         Creates an instance of the HTTPBasicAuth authenticator.
 
@@ -33,12 +33,15 @@ class HTTPBasicAuth(Authenticator):
         applicable, merged into the 'users' dictionary.  If no arguments are
         given, the instance attempts to retrieve user passwords from etcd.
 
+        :param app: The WSGI application being wrapped with authenticaiton.
+        :type app: callable
         :param filepath: Path to a JSON file containing hashed passwords
         :type filepath: str or None
         :param users: A dictionary of user names and hashed passwords, or None
         :type users: dict or None
         :returns: HTTPBasicAuth
         """
+        super(HTTPBasicAuth, self).__init__(app)
         self._data = users
         if filepath is not None:
             self._load_from_file(filepath)

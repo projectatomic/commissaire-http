@@ -49,7 +49,7 @@ class Authenticator:
         :rtype: list
         """
         if self.authenticate(environ, start_response):
-            self._app(environ, start_response)
+            return self._app(environ, start_response)
         else:
             start_response('403 Forbidden', [('content-type', 'text/html')])
             return [bytes('Forbidden', 'utf8')]

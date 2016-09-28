@@ -44,7 +44,7 @@ class TestHTTPClientCertAuth(TestCase):
         }
 
     def expect_forbidden(self, data=None, cn=None):
-        auth = httpauthclientcert.HTTPClientCertAuth(cn=cn)
+        auth = httpauthclientcert.HTTPClientCertAuth(None, cn=cn)
         environ = create_environ()
         if data is not None:
             environ['SSL_CLIENT_VERIFY'] = data
@@ -65,11 +65,11 @@ class TestHTTPClientCertAuth(TestCase):
         """
         self.expect_forbidden(data=self.cert, cn="other-cn")
 
-        auth = httpauthclientcert.HTTPClientCertAuth(cn="system:master-proxy")
+        auth = httpauthclientcert.HTTPClientCertAuth(None, cn="system:master-proxy")
         environ = create_environ()
         environ['SSL_CLIENT_VERIFY'] = self.cert
         self.assertTrue(auth.authenticate(environ, mock.MagicMock()))
 
         # With no cn any is valid
-        auth = httpauthclientcert.HTTPClientCertAuth()
+        auth = httpauthclientcert.HTTPClientCertAuth(None)
         self.assertTrue(auth.authenticate(environ, mock.MagicMock()))

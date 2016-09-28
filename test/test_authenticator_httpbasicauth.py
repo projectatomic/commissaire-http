@@ -38,7 +38,7 @@ class Test_HTTPBasicAuth(TestCase):
         Sets up a fresh instance of the class before each run.
         """
         # Empty users dict prevents it from trying to load from etcd.
-        self.http_basic_auth = httpbasicauth.HTTPBasicAuth(users={})
+        self.http_basic_auth = httpbasicauth.HTTPBasicAuth(None, users={})
 
     def test_decode_basic_auth(self):
         """
@@ -90,7 +90,7 @@ class TestHTTPBasicAuthByFile(TestCase):
         """
         Verify authenticate works with a proper JSON file, Authorization header, and a matching user.
         """
-        self.http_basic_auth = httpbasicauth.HTTPBasicAuth(self.user_config)
+        self.http_basic_auth = httpbasicauth.HTTPBasicAuth(None, self.user_config)
         environ = create_environ(headers={'HTTP_AUTHORIZATION': 'basic YTph'})
         self.assertEquals(
             True,
@@ -100,7 +100,7 @@ class TestHTTPBasicAuthByFile(TestCase):
         """
         Verify authenticate denies with a proper JSON file, Authorization header, and no matching user.
         """
-        self.http_basic_auth = httpbasicauth.HTTPBasicAuth(self.user_config)
+        self.http_basic_auth = httpbasicauth.HTTPBasicAuth(None, self.user_config)
         environ = create_environ(headers={'HTTP_AUTHORIZATION': 'basic Yjpi'})
 
         self.assertEquals(
@@ -111,7 +111,7 @@ class TestHTTPBasicAuthByFile(TestCase):
         """
         Verify authenticate denies with a proper JSON file, Authorization header, and the wrong password.
         """
-        self.http_basic_auth= httpbasicauth.HTTPBasicAuth(self.user_config)
+        self.http_basic_auth= httpbasicauth.HTTPBasicAuth(None, self.user_config)
         environ = create_environ(headers={'HTTP_AUTHORIZATION': 'basic YTpiCg=='})
         self.assertEquals(
             False,
@@ -174,7 +174,7 @@ class TestHTTPBasicAuthByEtcd(TestCase):
             manager.get.return_value = return_value
 
             # Reload with the data from the mock'd Etcd
-            http_basic_auth = httpbasicauth.HTTPBasicAuth()
+            http_basic_auth = httpbasicauth.HTTPBasicAuth(None)
 
             # Test the call
             req = falcon.Request(
@@ -200,7 +200,7 @@ class TestHTTPBasicAuthByEtcd(TestCase):
             manager.get.return_value = return_value
 
             # Reload with the data from the mock'd Etcd
-            http_basic_auth = httpbasicauth.HTTPBasicAuth()
+            http_basic_auth = httpbasicauth.HTTPBasicAuth(None)
 
             # Test the call
             req = falcon.Request(
@@ -226,7 +226,7 @@ class TestHTTPBasicAuthByEtcd(TestCase):
             manager.get.return_value = return_value
 
             # Reload with the data from the mock'd Etcd
-            http_basic_auth = httpbasicauth.HTTPBasicAuth()
+            http_basic_auth = httpbasicauth.HTTPBasicAuth(None)
 
             req = falcon.Request(
                 create_environ(headers={'Authorization': 'basic YTpiCg=='}))

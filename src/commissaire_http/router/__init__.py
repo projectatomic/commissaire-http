@@ -14,15 +14,15 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Prototype router.
+HTTP Router.
 """
 
 import logging
 
-import routes
+from routes import Mapper
 
 
-class Router(routes.Mapper):
+class Router(Mapper):
     """
     URL router.
     """
