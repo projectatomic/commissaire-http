@@ -138,22 +138,29 @@ class Dispatcher:
         :returns: The body of the HTTP response.
         :rtype: Mixed
         """
-        route = self._router.match(environ['PATH_INFO'], environ)
+        route = self._router.routematch(environ['PATH_INFO'], environ)
 
         # If we have a valid route
         params = {}
         if route:
+            # Split up the route from the route data
+            route, route_data = route
+
+            # Initial params come from the urllib
+            for param_key in route_data.minkeys:
+                params[param_key] = route[param_key]
+
             # If we are a PUT or POST look for params in wsgi.input
             if environ['REQUEST_METHOD'] in ('PUT', 'POST'):
                 if environ.get('CONTENT_LENGTH') and environ['CONTENT_LENGTH']:
                     try:
-                        params = json.loads(environ['wsgi.input'].read(
-                            int(environ['CONTENT_LENGTH'])).decode())
+                        params.update(json.loads(environ['wsgi.input'].read(
+                            int(environ['CONTENT_LENGTH'])).decode()))
                     except json.decoder.JSONDecodeError as error:
                         self.logger.debug(
                             'Unable to read "wsgi.input": {}'.format(error))
             else:
-                params = parse_query_string(environ.get('QUERY_STRING'))
+                params.update(parse_query_string(environ.get('QUERY_STRING')))
 
             # method is normally supposed to be the method to be called
             # but we hijack it for the method that was used over HTTP
