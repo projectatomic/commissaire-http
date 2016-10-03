@@ -52,7 +52,7 @@ setup(
     description='Commissaire HTTP Endpoint',
     author=extract_names('CONTRIBUTORS'),
     maintainer=extract_names('MAINTAINERS'),
-    url='https://github.com/ashcrow/commissaire-service',
+    url='https://github.com/projectatomic/commissaire-http',
     license="GPLv3+",
 
     install_requires=install_requires,
@@ -61,7 +61,7 @@ setup(
     packages=find_packages('src'),
     entry_points={
         'console_scripts': [
-            'commissaire-server = commissaire.server.cli:main',
+            'commissaire-server = commissaire_http.server.cli:main',
         ],
     }
 
