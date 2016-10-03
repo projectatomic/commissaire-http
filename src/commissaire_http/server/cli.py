@@ -25,7 +25,8 @@ from commissaire_http import CommissaireHttpServer, parse_args
 
 
 # TODO: Make this configurable
-for name in ('Dispatcher', 'Router', 'Bus', 'CommissaireHttpServer'):
+for name in (
+        'Dispatcher', 'Router', 'Bus', 'CommissaireHttpServer', 'Handlers'):
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
     handler = logging.StreamHandler()

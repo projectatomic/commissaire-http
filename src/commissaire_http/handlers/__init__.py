@@ -16,6 +16,11 @@
 Built-in handlers.
 """
 
+import logging
+
+#: Handler specific logger
+LOGGER = logging.getLogger('Handlers')
+
 
 def create_response(id, result=None, error=None):
     """
