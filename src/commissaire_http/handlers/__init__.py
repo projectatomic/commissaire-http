@@ -39,7 +39,7 @@ def create_response(id, result=None, error=None):
         'jsonrpc': '2.0',
         'id': id,
     }
-    if result:
+    if result is not None:
         jsonrpc_response['result'] = result
     elif error:
         jsonrpc_response['error'] = {

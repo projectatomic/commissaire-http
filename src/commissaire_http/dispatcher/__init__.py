@@ -126,6 +126,37 @@ class Dispatcher:
                     'Unable to import handler package "{}". {}: {}'.format(
                         pkg, type(error), error))
 
+    def _get_params(self, environ, route, route_data):
+        """
+        Handles pulling parameters out of the various inputs.
+
+        :param environ: WSGI environment dictionary.
+        :type environ: dict
+        :param route: The route structure returned by a routematch.
+        :type route: dict
+        :param route_data: Specific internals on a matched route.
+        :type route_data: dict
+        :returns: The found parameters.
+        :rtype: dict
+        """
+        params = {}
+        # Initial params come from the urllib
+        for param_key in route_data.minkeys:
+            params[param_key] = route[param_key]
+
+        # If we are a PUT or POST look for params in wsgi.input
+        if environ['REQUEST_METHOD'] in ('PUT', 'POST'):
+            if environ.get('CONTENT_LENGTH') and environ['CONTENT_LENGTH']:
+                try:
+                    params.update(json.loads(environ['wsgi.input'].read(
+                        int(environ['CONTENT_LENGTH'])).decode()))
+                except json.decoder.JSONDecodeError as error:
+                    self.logger.debug(
+                        'Unable to read "wsgi.input": {}'.format(error))
+        else:
+            params.update(parse_query_string(environ.get('QUERY_STRING')))
+        return params
+
     def dispatch(self, environ, start_response):
         """
         Dispatches an HTTP request into a jsonrpc message, passes it to a
@@ -139,29 +170,15 @@ class Dispatcher:
         :returns: The body of the HTTP response.
         :rtype: Mixed
         """
-        route = self._router.routematch(environ['PATH_INFO'], environ)
+        route_info = self._router.routematch(environ['PATH_INFO'], environ)
 
-        # If we have a valid route
-        params = {}
-        if route:
+        # If we have valid route_info
+        if route_info:
             # Split up the route from the route data
-            route, route_data = route
+            route, route_data = route_info
 
-            # Initial params come from the urllib
-            for param_key in route_data.minkeys:
-                params[param_key] = route[param_key]
-
-            # If we are a PUT or POST look for params in wsgi.input
-            if environ['REQUEST_METHOD'] in ('PUT', 'POST'):
-                if environ.get('CONTENT_LENGTH') and environ['CONTENT_LENGTH']:
-                    try:
-                        params.update(json.loads(environ['wsgi.input'].read(
-                            int(environ['CONTENT_LENGTH'])).decode()))
-                    except json.decoder.JSONDecodeError as error:
-                        self.logger.debug(
-                            'Unable to read "wsgi.input": {}'.format(error))
-            else:
-                params.update(parse_query_string(environ.get('QUERY_STRING')))
+            # Get the parameter
+            params = self._get_params(environ, route, route_data)
 
             # method is normally supposed to be the method to be called
             # but we hijack it for the method that was used over HTTP

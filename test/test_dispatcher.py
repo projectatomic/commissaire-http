@@ -120,3 +120,55 @@ class TestDispatcher(TestCase):
         result = self.dispatcher_instance.dispatch(environ, start_response)
         start_response.assert_called_once_with('404 Not Found', mock.ANY)
         self.assertEquals('Not Found', result[0].decode())
+
+    def test_dispatcher__get_params_with_uri_param(self):
+        """
+        Verify Dispacher._get_params returns proper parameters from a uri.
+        """
+        environ = {
+            'PATH_INFO': '/test/',
+            'REQUEST_METHOD': 'GET',
+        }
+        route = {
+            'test': 'test',
+            'controller': 'testing',
+        }
+        route_data = mock.MagicMock(minkeys=['test'])
+        self.assertEquals(
+            {'test': 'test'},
+            self.dispatcher_instance._get_params(environ, route, route_data))
+
+    def test_dispatcher__get_params_with_query_string(self):
+        """
+        Verify Dispacher._get_params returns proper parameters from a query string.
+        """
+        environ = {
+            'PATH_INFO': '/test/',
+            'QUERY_STRING': 'from=querystring',
+            'REQUEST_METHOD': 'GET',
+        }
+        route = {
+            'controller': 'testing',
+        }
+        route_data = mock.MagicMock(minkeys=[])
+        self.assertEquals(
+            {'from': 'querystring'},
+            self.dispatcher_instance._get_params(environ, route, route_data))
+
+    def test_dispatcher__get_params_with_wsgi_input(self):
+        """
+        Verify Dispacher._get_params returns proper parameters from wsgi.input.
+        """
+        environ = {
+            'PATH_INFO': '/test/',
+            'REQUEST_METHOD': 'PUT',
+            'CONTENT_LENGTH': 16,
+            'wsgi.input': BytesIO(b'{"from": "wsgi"}')
+        }
+        route = {
+            'controller': 'testing',
+        }
+        route_data = mock.MagicMock(minkeys=[])
+        self.assertEquals(
+            {'from': 'wsgi'},
+            self.dispatcher_instance._get_params(environ, route, route_data))
