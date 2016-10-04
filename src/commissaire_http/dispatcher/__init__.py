@@ -189,6 +189,13 @@ class Dispatcher:
                     'Handler {} returned "{}"'.format(
                         route['controller'], result))
                 if 'error' in result.keys():
+                    # If it's Invalid params handle it
+                    if result['error']['code'] == -32602:
+                        start_response(
+                            '400 Bad Request',
+                            [('content-type', 'application/json')])
+                        return [bytes(json.dumps(result['error']), 'utf8')]
+                    # Otherwise treat it like a 500 by raising
                     raise Exception(result['error'])
                 elif 'result' in result.keys():
                     start_response(
