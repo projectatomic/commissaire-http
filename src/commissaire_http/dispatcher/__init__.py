@@ -26,6 +26,7 @@ from inspect import signature, isfunction, isclass
 from urllib.parse import parse_qs
 
 from commissaire_http.bus import Bus
+from commissaire_http.constants import JSONRPC_ERRORS
 
 
 def parse_query_string(qs):
@@ -189,12 +190,19 @@ class Dispatcher:
                     'Handler {} returned "{}"'.format(
                         route['controller'], result))
                 if 'error' in result.keys():
+                    error = result['error']
                     # If it's Invalid params handle it
-                    if result['error']['code'] == -32602:
+                    if error['code'] == JSONRPC_ERRORS['BAD_REQUEST']:
                         start_response(
                             '400 Bad Request',
                             [('content-type', 'application/json')])
-                        return [bytes(json.dumps(result['error']), 'utf8')]
+                        return [bytes(json.dumps(error), 'utf8')]
+                    if error['code'] == JSONRPC_ERRORS['NOT_FOUND']:
+                        start_response(
+                            '404 Not Found',
+                            [('content-type', 'application/json')])
+                        return [bytes(json.dumps(error), 'utf8')]
+
                     # Otherwise treat it like a 500 by raising
                     raise Exception(result['error'])
                 elif 'result' in result.keys():
