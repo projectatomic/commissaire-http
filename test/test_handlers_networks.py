@@ -21,7 +21,7 @@ from unittest import mock
 from . import TestCase
 
 from commissaire.constants import JSONRPC_ERRORS
-from commissaire_http.handlers import create_response, clusters
+from commissaire_http.handlers import networks, create_response, clusters
 from commissaire.models import Network, ValidationError
 
 
@@ -46,3 +46,29 @@ class Test_networks(TestCase):
                 'id': '123',
             },
             clusters.list_clusters(bus.request.return_value, bus))
+
+    def test_get_network(self):
+        """
+        Verify get_network responds with the right information.
+        """
+        bus = mock.MagicMock()
+        bus.request.return_value = {
+                'jsonrpc': '2.0',
+                'result': Network.new(name='test').to_dict(),
+                'id': '123',
+            }
+        self.assertEquals(
+            {
+                'jsonrpc': '2.0',
+                'result': {
+                    'name': 'test',
+                    'type': 'flannel_etcd',
+                    'options': {},
+                },
+                'id': '123',
+            },
+            networks.get_network({
+                'jsonrpc': '2.0',
+                'id': '123',
+                'params': {'name': 'test'}
+                }, bus))

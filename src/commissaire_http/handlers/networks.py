@@ -16,7 +16,10 @@
 Networks handlers.
 """
 
-from commissaire_http.handlers import create_response
+from commissaire import models
+from commissaire import bus as _bus
+from commissaire_http.constants import JSONRPC_ERRORS
+from commissaire_http.handlers import create_response, return_error
 
 
 def list_networks(message, bus):
@@ -34,3 +37,25 @@ def list_networks(message, bus):
     return create_response(
         message['id'],
         [network['name'] for network in networks_msg['result']])
+
+
+def get_network(message, bus):
+    """
+    Gets a specific network.
+
+    :param message: jsonrpc message structure.
+    :type message: dict
+    :param bus: Bus instance.
+    :type bus: commissaire_http.bus.Bus
+    :returns: A jsonrpc structure.
+    :rtype: dict
+    """
+    try:
+        network_response = bus.request(
+            'storage.get', params=[
+                'Network', {'name': message['params']['name']}, True])
+        network = models.Network.new(**network_response['result'])
+
+        return create_response(message['id'], network.to_dict())
+    except _bus.RemoteProcedureCallError as error:
+        return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
