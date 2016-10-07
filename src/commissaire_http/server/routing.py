@@ -66,11 +66,16 @@ ROUTER.connect(
     },
     controller='commissaire_http.handlers.clusters.delete_cluster_member',
     conditions={'method': 'DELETE'})
-
+# Networks
+ROUTER.connect(
+    R'/api/v0/networks/',
+    controller='commissaire_http.handlers.networks.list_networks',
+    conditions={'method': 'GET'})
 
 #: Global HTTP dispatcher for the server
 DISPATCHER = Dispatcher(
     ROUTER,
     handler_packages=[
         'commissaire_http.handlers',
-        'commissaire_http.handlers.clusters'])
+        'commissaire_http.handlers.clusters',
+        'commissaire_http.handlers.networks'])
