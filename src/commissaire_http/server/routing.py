@@ -16,27 +16,57 @@
 Routing items.
 """
 
+from commissaire_http.constants import ROUTING_RX_PARAMS
+
 from commissaire_http.dispatcher import Dispatcher
 from commissaire_http.router import Router
 
 #: Global HTTP router for the dispatcher
 ROUTER = Router()
 ROUTER.connect(
-    R'/hello/',
-    controller='commissaire_http.handlers.hello_world',
-    conditions={'method': 'GET'})
-ROUTER.connect(
-    R'/world/',
-    controller='commissaire_http.handlers.create_world',
-    conditions={'method': 'PUT'})
-ROUTER.connect(
-    R'/hello_class/',
-    controller='commissaire_http.handlers.ClassHandlerExample.hello',
-    conditions={'method': 'GET'})
-ROUTER.connect(
     R'/api/v0/clusters/',
     controller='commissaire_http.handlers.clusters.list_clusters',
     conditions={'method': 'GET'})
+ROUTER.connect(
+    R'/api/v0/cluster/{name}/',
+    requirements={'name': ROUTING_RX_PARAMS['name']},
+    controller='commissaire_http.handlers.clusters.get_cluster',
+    conditions={'method': 'GET'})
+ROUTER.connect(
+    R'/api/v0/cluster/{name}/',
+    requirements={'name': ROUTING_RX_PARAMS['name']},
+    controller='commissaire_http.handlers.clusters.create_cluster',
+    conditions={'method': 'PUT'})
+ROUTER.connect(
+    R'/api/v0/cluster/{name}/hosts/',
+    requirements={'name': ROUTING_RX_PARAMS['name']},
+    controller='commissaire_http.handlers.clusters.list_cluster_members',
+    conditions={'method': 'GET'})
+ROUTER.connect(
+    R'/api/v0/cluster/{name}/hosts/{host}/',
+    requirements={
+        'name': ROUTING_RX_PARAMS['name'],
+        'host': ROUTING_RX_PARAMS['host'],
+    },
+    controller='commissaire_http.handlers.clusters.check_cluster_member',
+    conditions={'method': 'GET'})
+ROUTER.connect(
+    R'/api/v0/cluster/{name}/hosts/{host}/',
+    requirements={
+        'name': ROUTING_RX_PARAMS['name'],
+        'host': ROUTING_RX_PARAMS['host'],
+    },
+    controller='commissaire_http.handlers.clusters.add_cluster_member',
+    conditions={'method': 'PUT'})
+ROUTER.connect(
+    R'/api/v0/cluster/{name}/hosts/{host}/',
+    requirements={
+        'name': ROUTING_RX_PARAMS['name'],
+        'host': ROUTING_RX_PARAMS['host'],
+    },
+    controller='commissaire_http.handlers.clusters.delete_cluster_member',
+    conditions={'method': 'DELETE'})
+
 
 #: Global HTTP dispatcher for the server
 DISPATCHER = Dispatcher(

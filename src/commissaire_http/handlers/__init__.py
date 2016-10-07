@@ -18,11 +18,35 @@ Built-in handlers.
 
 import logging
 
+from commissaire_http.constants import JSONRPC_ERRORS
+
 #: Handler specific logger
 LOGGER = logging.getLogger('Handlers')
 
 
-def create_response(id, result=None, error=None):
+def return_error(message, error, error_code):
+    """
+    Shortcut for logging and returning an error.
+
+    :param message: jsonrpc message structure.
+    :type message: dict
+    :param error: The error to send back to the requestor.
+    :type error: str or Exception
+    :param error_code: JSONRPC error code.
+    :type error_code: int
+    :returns: A jsonrpc structure.
+    :rtype: dict
+    """
+    LOGGER.error('Error dealing with: "{}"'.format(message))
+    response = create_response(
+        message['id'], error=error,
+        error_code=error_code)
+    LOGGER.debug('Returning: {}'.format(response))
+    return response
+
+
+def create_response(id, result=None, error=None,
+                    error_code=JSONRPC_ERRORS['INTERNAL_ERROR']):
     """
     Creates a jsonrpc response based on input.
 
@@ -31,7 +55,9 @@ def create_response(id, result=None, error=None):
     :param result: The result to send back to the requestor.
     :type result: mixed
     :param error: The error to send back to the requestor.
-    :type error: dict
+    :type error: str or Exception
+    :param error_code: JSONRPC error code. Defaults to Internal Error.
+    :type error_code: int
     :returns: A jsonrpc structure.
     :rtype: dict
     """
@@ -43,9 +69,12 @@ def create_response(id, result=None, error=None):
         jsonrpc_response['result'] = result
     elif error:
         jsonrpc_response['error'] = {
-            'code': -32603,  # Default to Internal Error
-            'message': error,
+            'code': error_code,
+            'message': str(error),
         }
+        if isinstance(error, Exception):
+            jsonrpc_response['error']['data'] = {
+                'exception': str(type(error))}
     else:
         raise TypeError('Either a result or error is required.')
     return jsonrpc_response

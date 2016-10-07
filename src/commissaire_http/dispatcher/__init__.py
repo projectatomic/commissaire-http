@@ -214,12 +214,16 @@ class Dispatcher:
                             '400 Bad Request',
                             [('content-type', 'application/json')])
                         return [bytes(json.dumps(error), 'utf8')]
-                    if error['code'] == JSONRPC_ERRORS['NOT_FOUND']:
+                    elif error['code'] == JSONRPC_ERRORS['NOT_FOUND']:
                         start_response(
                             '404 Not Found',
                             [('content-type', 'application/json')])
                         return [bytes(json.dumps(error), 'utf8')]
-
+                    elif error['code'] == JSONRPC_ERRORS['CONFLICT']:
+                        start_response(
+                            '409 Conflict',
+                            [('content-type', 'application/json')])
+                        return [bytes(json.dumps(error), 'utf8')]
                     # Otherwise treat it like a 500 by raising
                     raise Exception(result['error'])
                 elif 'result' in result.keys():
