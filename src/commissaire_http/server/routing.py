@@ -81,6 +81,12 @@ ROUTER.connect(
     requirements={'name': ROUTING_RX_PARAMS['name']},
     controller='commissaire_http.handlers.networks.create_network',
     conditions={'method': 'PUT'})
+ROUTER.connect(
+    R'/api/v0/network/{name}/',
+    requirements={'name': ROUTING_RX_PARAMS['name']},
+    controller='commissaire_http.handlers.networks.delete_network',
+    conditions={'method': 'DELETE'})
+
 #: Global HTTP dispatcher for the server
 DISPATCHER = Dispatcher(
     ROUTER,

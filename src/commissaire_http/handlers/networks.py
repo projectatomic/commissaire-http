@@ -108,3 +108,30 @@ def create_network(message, bus):
         return create_response(message['id'], response['result'])
     except models.ValidationError as error:
         return return_error(message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
+
+
+def delete_network(message, bus):
+    """
+    Deletes an exisiting network.
+
+    :param message: jsonrpc message structure.
+    :type message: dict
+    :param bus: Bus instance.
+    :type bus: commissaire_http.bus.Bus
+    :returns: A jsonrpc structure.
+    :rtype: dict
+    """
+    try:
+        LOGGER.debug('Attempting to delete network "{}"'.format(
+            message['params']['name']))
+        bus.request('storage.delete', params=[
+            'Network', {'name': message['params']['name']}])
+        return create_response(message['id'], [])
+    except _bus.RemoteProcedureCallError as error:
+        LOGGER.debug('Error deleting network: {}: {}'.format(
+            type(error), error))
+        return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
+    except Exception as error:
+        LOGGER.debug('Error deleting network: {}: {}'.format(
+            type(error), error))
+        return return_error(message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])

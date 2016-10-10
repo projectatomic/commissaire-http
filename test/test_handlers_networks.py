@@ -163,3 +163,67 @@ class Test_networks(TestCase):
                 'id': '123',
                 'params': {'name': 'test'}
                 }, bus))
+
+    def test_delete_network(self):
+        """
+        Verify delete_network deletes existing networks.
+        """
+        bus = mock.MagicMock()
+        bus.request.return_value = None
+        self.assertEquals(
+            {
+                'jsonrpc': '2.0',
+                'result': [],
+                'id': '123',
+            },
+            networks.delete_network({
+                'jsonrpc': '2.0',
+                'id': '123',
+                'params': {'name': 'test'}
+                }, bus))
+
+    def test_delete_network_not_found_on_missing_key(self):
+        """
+        Verify delete_network returns 404 on a missing network.
+        """
+        bus = mock.MagicMock()
+        bus.request.side_effect = _bus.RemoteProcedureCallError('test')
+        self.assertEquals(
+            {
+                'jsonrpc': '2.0',
+                'error': {
+                    'code': JSONRPC_ERRORS['NOT_FOUND'],
+                    'message': mock.ANY,
+                    'data': mock.ANY,
+                },
+                'id': '123',
+            },
+            networks.delete_network({
+                'jsonrpc': '2.0',
+                'id': '123',
+                'params': {'name': 'test'}
+                }, bus))
+
+    def test_delete_network_internal_error_on_exception(self):
+        """
+        Verify delete_network returns ISE on any other exception
+        """
+        # Iterate over a few errors
+        for error in (Exception, KeyError, TypeError):
+            bus = mock.MagicMock()
+            bus.request.side_effect = error('test')
+            self.assertEquals(
+                {
+                    'jsonrpc': '2.0',
+                    'error': {
+                        'code': JSONRPC_ERRORS['INTERNAL_ERROR'],
+                        'message': mock.ANY,
+                        'data': mock.ANY,
+                    },
+                    'id': '123',
+                },
+                networks.delete_network({
+                    'jsonrpc': '2.0',
+                    'id': '123',
+                    'params': {'name': 'test'}
+                    }, bus))
