@@ -20,6 +20,7 @@ from unittest import mock
 
 from . import TestCase
 
+from commissaire import bus as _bus
 from commissaire.constants import JSONRPC_ERRORS
 from commissaire_http.handlers import networks, create_response, clusters
 from commissaire.models import Network, ValidationError
@@ -68,6 +69,96 @@ class Test_networks(TestCase):
                 'id': '123',
             },
             networks.get_network({
+                'jsonrpc': '2.0',
+                'id': '123',
+                'params': {'name': 'test'}
+                }, bus))
+
+    def test_create_network(self):
+        """
+        Verify create_network can create a new network.
+        """
+        bus = mock.MagicMock()
+        bus.request.side_effect = (
+            # Network doesn't yet exist
+            _bus.RemoteProcedureCallError('test'),
+            # Creation response
+            {
+                'jsonrpc': '2.0',
+                'result': Network.new(name='test').to_dict(),
+                'id': '123',
+            })
+        self.assertEquals(
+            {
+                'jsonrpc': '2.0',
+                'result': {
+                    'name': 'test',
+                    'type': 'flannel_etcd',
+                    'options': {},
+                },
+                'id': '123',
+            },
+            networks.create_network({
+                'jsonrpc': '2.0',
+                'id': '123',
+                'params': {'name': 'test'}
+                }, bus))
+
+    def test_create_network_idempotent(self):
+        """
+        Verify create_network acts idempotent.
+        """
+        bus = mock.MagicMock()
+        network = Network.new(name='test')
+        bus.request.side_effect = (
+            # Network exists
+            {
+                'jsonrpc': '2.0',
+                'result': network.to_dict(),
+                'id': '123',
+            },
+            # Creation response
+            {
+                'jsonrpc': '2.0',
+                'result': network.to_dict(),
+                'id': '123',
+            })
+        self.assertEquals(
+            {
+                'jsonrpc': '2.0',
+                'result': {
+                    'name': 'test',
+                    'type': 'flannel_etcd',
+                    'options': {},
+                },
+                'id': '123',
+            },
+            networks.create_network({
+                'jsonrpc': '2.0',
+                'id': '123',
+                'params': {'name': 'test'}
+                }, bus))
+
+    def test_create_network_conflict(self):
+        """
+        Verify create_network rejects conflicting network creation.
+        """
+        bus = mock.MagicMock()
+        bus.request.return_value = {
+                'jsonrpc': '2.0',
+                'result': Network.new(name='test', options={'test': 'test'}).to_dict(),
+                'id': '123',
+            }
+        self.assertEquals(
+            {
+                'jsonrpc': '2.0',
+                'error': {
+                    'code': 409,
+                    'message': mock.ANY,
+                },
+                'id': '123',
+            },
+            networks.create_network({
                 'jsonrpc': '2.0',
                 'id': '123',
                 'params': {'name': 'test'}

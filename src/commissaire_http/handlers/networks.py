@@ -19,7 +19,7 @@ Networks handlers.
 from commissaire import models
 from commissaire import bus as _bus
 from commissaire_http.constants import JSONRPC_ERRORS
-from commissaire_http.handlers import create_response, return_error
+from commissaire_http.handlers import LOGGER, create_response, return_error
 
 
 def list_networks(message, bus):
@@ -59,3 +59,52 @@ def get_network(message, bus):
         return create_response(message['id'], network.to_dict())
     except _bus.RemoteProcedureCallError as error:
         return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
+
+
+def create_network(message, bus):
+    """
+    Creates a new network.
+
+    :param message: jsonrpc message structure.
+    :type message: dict
+    :param bus: Bus instance.
+    :type bus: commissaire_http.bus.Bus
+    :returns: A jsonrpc structure.
+    :rtype: dict
+    """
+    try:
+        LOGGER.debug('create_network params: {}'.format(message['params']))
+        # Check to see if we already have a network with that name
+        network = bus.request('storage.get', params=[
+            'Network', {'name': message['params']['name']}])
+        LOGGER.debug(
+            'Creation of already exisiting network "{0}" requested.'.format(
+                message['params']['name']))
+
+        # If they are the same thing then go ahead and return success
+        if models.Network.new(
+            **network['result']).to_dict() == models.Network.new(
+                **message['params']).to_dict():
+            return create_response(message['id'], network['result'])
+
+        # Otherwise error with a CONFLICT
+        return return_error(
+            message,
+            'A network with that name already exists.',
+            JSONRPC_ERRORS['CONFLICT'])
+    except _bus.RemoteProcedureCallError as error:
+        LOGGER.debug('Error getting network: {}: {}'.format(
+            type(error), error))
+        LOGGER.info('Attempting to create new network: "{}"'.format(
+            message['params']))
+
+    # Create the new network
+    try:
+        network = models.Network.new(**message['params'])
+        network._validate()
+        response = bus.request(
+            'storage.save', params=[
+                'Network', network.to_dict()])
+        return create_response(message['id'], response['result'])
+    except models.ValidationError as error:
+        return return_error(message, error, JSONRPC_ERRORS['INVALID_REQUEST'])

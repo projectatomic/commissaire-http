@@ -76,7 +76,11 @@ ROUTER.connect(
     requirements={'name': ROUTING_RX_PARAMS['name']},
     controller='commissaire_http.handlers.networks.get_network',
     conditions={'method': 'GET'})
-
+ROUTER.connect(
+    R'/api/v0/network/{name}/',
+    requirements={'name': ROUTING_RX_PARAMS['name']},
+    controller='commissaire_http.handlers.networks.create_network',
+    conditions={'method': 'PUT'})
 #: Global HTTP dispatcher for the server
 DISPATCHER = Dispatcher(
     ROUTER,
