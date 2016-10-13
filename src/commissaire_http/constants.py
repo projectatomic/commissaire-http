@@ -27,4 +27,5 @@ JSONRPC_ERRORS['BAD_REQUEST'] = JSONRPC_ERRORS['INVALID_REQUEST']
 ROUTING_RX_PARAMS = {
     'name': R'[a-zA-Z0-9\-\_]+',
     'host': R'[a-zA-Z0-9\-\_\.]+',
+    'address': R'[a-zA-Z0-9\-\_\.]+',
 }

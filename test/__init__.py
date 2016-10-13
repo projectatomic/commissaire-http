@@ -17,6 +17,8 @@ import os
 
 from unittest import TestCase, mock
 
+from commissaire_http.handlers import create_response
+
 
 def create_environ(path='/', headers={}):
     """
@@ -49,6 +51,21 @@ def get_fixture_file_path(filename):
     raise Exception(
         'Can not find path for config: {0}'.format(filename))
 
+
+def expected_error(message_id, code):
+    """
+    Creates an expected error structure with the error information as mock.ANY.
+
+    :param message_id: The ID of the message.
+    :type message_id: str
+    :param code: The JSONRPC_ERRORS code to use.
+    :type code: int
+    :returns: An error structure for use with tests.
+    :rtpe: dict
+    """
+    expected = create_response(message_id, error='error', error_code=code)
+    expected['error'] = mock.ANY
+    return expected
 
 class TestCase(TestCase):
     """
