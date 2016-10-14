@@ -18,7 +18,7 @@ Test for commissaire_http.handlers.networks module.
 
 from unittest import mock
 
-from . import TestCase
+from . import TestCase, expected_error
 
 from commissaire import bus as _bus
 from commissaire.constants import JSONRPC_ERRORS
@@ -102,15 +102,11 @@ class Test_networks(TestCase):
         bus.request.return_value = {
                 'jsonrpc': '2.0',
                 'result': Network.new(
-                    name='test', options={'test': 'test'}).to_dict(),
+                    name=NETWORK.name, options={'test': 'test'}).to_dict(),
                 'id': '123',
             }
-        expected = create_response(
-            ID, error='error',
-            error_code=JSONRPC_ERRORS['CONFLICT'])
-        expected['error']['message'] = mock.ANY
         self.assertEquals(
-            expected,
+            expected_error(ID, JSONRPC_ERRORS['CONFLICT']),
             networks.create_network(SIMPLE_NETWORK_REQUEST, bus))
 
     def test_delete_network(self):
@@ -133,14 +129,9 @@ class Test_networks(TestCase):
         """
         bus = mock.MagicMock()
         bus.request.side_effect = _bus.RemoteProcedureCallError('test')
-        expected = create_response(
-            ID, error='error',
-            error_code=JSONRPC_ERRORS['NOT_FOUND'])
-        expected['error']['message'] = mock.ANY
-        expected['error']['data'] = mock.ANY
 
         self.assertEquals(
-            expected,
+            expected_error(ID, JSONRPC_ERRORS['NOT_FOUND']),
             networks.delete_network(SIMPLE_NETWORK_REQUEST, bus))
 
     def test_delete_network_internal_error_on_exception(self):
@@ -152,12 +143,6 @@ class Test_networks(TestCase):
             bus = mock.MagicMock()
             bus.request.side_effect = error('test')
 
-            expected = create_response(
-                ID, error='error',
-                error_code=JSONRPC_ERRORS['INTERNAL_ERROR'])
-            expected['error']['message'] = mock.ANY
-            expected['error']['data'] = mock.ANY
-
             self.assertEquals(
-                expected,
+                expected_error(ID, JSONRPC_ERRORS['INTERNAL_ERROR']),
                 networks.delete_network(SIMPLE_NETWORK_REQUEST, bus))
