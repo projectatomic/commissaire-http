@@ -23,6 +23,64 @@ from commissaire import models
 from commissaire_http.handlers import LOGGER, create_response, return_error
 
 
+def _register(router):
+    """
+    Sets up routing for clusters.
+
+    :param router: Router instance to attach to.
+    :type router: commissaire_http.router.Router
+    :returns: The router.
+    :rtype: commissaire_http.router.Router
+    """
+    from commissaire_http.constants import ROUTING_RX_PARAMS
+
+    router.connect(
+        R'/api/v0/clusters/',
+        controller=list_clusters,
+        conditions={'method': 'GET'})
+    router.connect(
+        R'/api/v0/cluster/{name}/',
+        requirements={'name': ROUTING_RX_PARAMS['name']},
+        controller=get_cluster,
+        conditions={'method': 'GET'})
+    router.connect(
+        R'/api/v0/cluster/{name}/',
+        requirements={'name': ROUTING_RX_PARAMS['name']},
+        controller=create_cluster,
+        conditions={'method': 'PUT'})
+    router.connect(
+        R'/api/v0/cluster/{name}/hosts/',
+        requirements={'name': ROUTING_RX_PARAMS['name']},
+        controller=list_cluster_members,
+        conditions={'method': 'GET'})
+    router.connect(
+        R'/api/v0/cluster/{name}/hosts/{host}/',
+        requirements={
+            'name': ROUTING_RX_PARAMS['name'],
+            'host': ROUTING_RX_PARAMS['host'],
+        },
+        controller=check_cluster_member,
+        conditions={'method': 'GET'})
+    router.connect(
+        R'/api/v0/cluster/{name}/hosts/{host}/',
+        requirements={
+            'name': ROUTING_RX_PARAMS['name'],
+            'host': ROUTING_RX_PARAMS['host'],
+        },
+        controller=add_cluster_member,
+        conditions={'method': 'PUT'})
+    router.connect(
+        R'/api/v0/cluster/{name}/hosts/{host}/',
+        requirements={
+            'name': ROUTING_RX_PARAMS['name'],
+            'host': ROUTING_RX_PARAMS['host'],
+        },
+        controller=delete_cluster_member,
+        conditions={'method': 'DELETE'})
+
+    return router
+
+
 def list_clusters(message, bus):
     """
     Lists all clusters.

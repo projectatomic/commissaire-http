@@ -23,6 +23,53 @@ from commissaire_http.constants import JSONRPC_ERRORS
 from commissaire_http.handlers import LOGGER, create_response, return_error
 
 
+def _register(router):
+    """
+    Sets up routing for hosts.
+
+    :param router: Router instance to attach to.
+    :type router: commissaire_http.router.Router
+    :returns: The router.
+    :rtype: commissaire_http.router.Router
+    """
+    from commissaire_http.constants import ROUTING_RX_PARAMS
+
+    router.connect(
+        R'/api/v0/hosts/',
+        controller=list_hosts,
+        conditions={'method': 'GET'})
+    router.connect(
+        R'/api/v0/host/{address}/',
+        requirements={'address': ROUTING_RX_PARAMS['address']},
+        controller=get_host,
+        conditions={'method': 'GET'})
+    router.connect(
+        R'/api/v0/host/{address}/',
+        requirements={'address': ROUTING_RX_PARAMS['address']},
+        controller=create_host,
+        conditions={'method': 'PUT'})
+    router.connect(
+        R'/api/v0/host/',
+        controller=create_host,
+        conditions={'method': 'PUT'})
+    router.connect(
+        R'/api/v0/host/{address}/creds',
+        requirements={'address': ROUTING_RX_PARAMS['address']},
+        controller=get_hostcreds,
+        conditions={'method': 'GET'})
+    router.connect(
+        R'/api/v0/host/{address}/',
+        requirements={'address': ROUTING_RX_PARAMS['address']},
+        controller=delete_host,
+        conditions={'method': 'DELETE'})
+    router.connect(
+        R'/api/v0/host/{address}/status/',
+        controller=get_host_status,
+        conditions={'method': 'GET'})
+
+    return router
+
+
 def list_hosts(message, bus):
     """
     Lists all hosts.

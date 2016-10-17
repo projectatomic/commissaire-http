@@ -16,109 +16,16 @@
 Routing items.
 """
 
-from commissaire_http.constants import ROUTING_RX_PARAMS
-
 from commissaire_http.dispatcher import Dispatcher
 from commissaire_http.router import Router
 
+from commissaire_http.handlers import clusters, hosts, networks
+
 #: Global HTTP router for the dispatcher
 ROUTER = Router(optional_slash=True)
-ROUTER.connect(
-    R'/api/v0/clusters/',
-    controller='commissaire_http.handlers.clusters.list_clusters',
-    conditions={'method': 'GET'})
-ROUTER.connect(
-    R'/api/v0/cluster/{name}/',
-    requirements={'name': ROUTING_RX_PARAMS['name']},
-    controller='commissaire_http.handlers.clusters.get_cluster',
-    conditions={'method': 'GET'})
-ROUTER.connect(
-    R'/api/v0/cluster/{name}/',
-    requirements={'name': ROUTING_RX_PARAMS['name']},
-    controller='commissaire_http.handlers.clusters.create_cluster',
-    conditions={'method': 'PUT'})
-ROUTER.connect(
-    R'/api/v0/cluster/{name}/hosts/',
-    requirements={'name': ROUTING_RX_PARAMS['name']},
-    controller='commissaire_http.handlers.clusters.list_cluster_members',
-    conditions={'method': 'GET'})
-ROUTER.connect(
-    R'/api/v0/cluster/{name}/hosts/{host}/',
-    requirements={
-        'name': ROUTING_RX_PARAMS['name'],
-        'host': ROUTING_RX_PARAMS['host'],
-    },
-    controller='commissaire_http.handlers.clusters.check_cluster_member',
-    conditions={'method': 'GET'})
-ROUTER.connect(
-    R'/api/v0/cluster/{name}/hosts/{host}/',
-    requirements={
-        'name': ROUTING_RX_PARAMS['name'],
-        'host': ROUTING_RX_PARAMS['host'],
-    },
-    controller='commissaire_http.handlers.clusters.add_cluster_member',
-    conditions={'method': 'PUT'})
-ROUTER.connect(
-    R'/api/v0/cluster/{name}/hosts/{host}/',
-    requirements={
-        'name': ROUTING_RX_PARAMS['name'],
-        'host': ROUTING_RX_PARAMS['host'],
-    },
-    controller='commissaire_http.handlers.clusters.delete_cluster_member',
-    conditions={'method': 'DELETE'})
-# Networks
-ROUTER.connect(
-    R'/api/v0/networks/',
-    controller='commissaire_http.handlers.networks.list_networks',
-    conditions={'method': 'GET'})
-ROUTER.connect(
-    R'/api/v0/network/{name}/',
-    requirements={'name': ROUTING_RX_PARAMS['name']},
-    controller='commissaire_http.handlers.networks.get_network',
-    conditions={'method': 'GET'})
-ROUTER.connect(
-    R'/api/v0/network/{name}/',
-    requirements={'name': ROUTING_RX_PARAMS['name']},
-    controller='commissaire_http.handlers.networks.create_network',
-    conditions={'method': 'PUT'})
-ROUTER.connect(
-    R'/api/v0/network/{name}/',
-    requirements={'name': ROUTING_RX_PARAMS['name']},
-    controller='commissaire_http.handlers.networks.delete_network',
-    conditions={'method': 'DELETE'})
-# Hosts
-ROUTER.connect(
-    R'/api/v0/hosts/',
-    controller='commissaire_http.handlers.hosts.list_hosts',
-    conditions={'method': 'GET'})
-ROUTER.connect(
-    R'/api/v0/host/{address}/',
-    requirements={'address': ROUTING_RX_PARAMS['address']},
-    controller='commissaire_http.handlers.hosts.get_host',
-    conditions={'method': 'GET'})
-ROUTER.connect(
-    R'/api/v0/host/{address}/',
-    requirements={'address': ROUTING_RX_PARAMS['address']},
-    controller='commissaire_http.handlers.hosts.create_host',
-    conditions={'method': 'PUT'})
-ROUTER.connect(
-    R'/api/v0/host/',
-    controller='commissaire_http.handlers.hosts.create_host',
-    conditions={'method': 'PUT'})
-ROUTER.connect(
-    R'/api/v0/host/{address}/creds',
-    requirements={'address': ROUTING_RX_PARAMS['address']},
-    controller='commissaire_http.handlers.hosts.get_hostcreds',
-    conditions={'method': 'GET'})
-ROUTER.connect(
-    R'/api/v0/host/{address}/',
-    requirements={'address': ROUTING_RX_PARAMS['address']},
-    controller='commissaire_http.handlers.hosts.delete_host',
-    conditions={'method': 'DELETE'})
-ROUTER.connect(
-    R'/api/v0/host/{address}/status/',
-    controller='commissaire_http.handlers.hosts.get_host_status',
-    conditions={'method': 'GET'})
+hosts._register(ROUTER)
+clusters._register(ROUTER)
+networks._register(ROUTER)
 
 #: Global HTTP dispatcher for the server
 DISPATCHER = Dispatcher(

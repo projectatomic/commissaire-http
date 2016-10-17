@@ -193,7 +193,12 @@ class Dispatcher:
                 'Request transformed to "{}".'.format(jsonrpc_msg))
             # Get the resulting message back
             try:
-                handler = self._handler_map.get(route['controller'])
+                # If the handler registered is a callable, use it
+                if callable(route['controller']):
+                    handler = route['controller']
+                # Else load what we found earlier
+                else:
+                    handler = self._handler_map.get(route['controller'])
                 self.logger.debug('Using controller {}->{}'.format(
                     route, handler))
                 # Pass the message and, if needed, a new instance of the

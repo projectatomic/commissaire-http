@@ -22,6 +22,41 @@ from commissaire_http.constants import JSONRPC_ERRORS
 from commissaire_http.handlers import LOGGER, create_response, return_error
 
 
+def _register(router):
+    """
+    Sets up routing for clusters.
+
+    :param router: Router instance to attach to.
+    :type router: commissaire_http.router.Router
+    :returns: The router.
+    :rtype: commissaire_http.router.Router
+    """
+    from commissaire_http.constants import ROUTING_RX_PARAMS
+
+    # Networks
+    router.connect(
+        R'/api/v0/networks/',
+        controller=list_networks,
+        conditions={'method': 'GET'})
+    router.connect(
+        R'/api/v0/network/{name}/',
+        requirements={'name': ROUTING_RX_PARAMS['name']},
+        controller=get_network,
+        conditions={'method': 'GET'})
+    router.connect(
+        R'/api/v0/network/{name}/',
+        requirements={'name': ROUTING_RX_PARAMS['name']},
+        controller=create_network,
+        conditions={'method': 'PUT'})
+    router.connect(
+        R'/api/v0/network/{name}/',
+        requirements={'name': ROUTING_RX_PARAMS['name']},
+        controller=delete_network,
+        conditions={'method': 'DELETE'})
+
+    return router
+
+
 def list_networks(message, bus):
     """
     Lists all networks.
