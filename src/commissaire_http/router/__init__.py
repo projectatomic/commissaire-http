@@ -30,6 +30,42 @@ class Router(Mapper):
     #: Class level logger
     logger = logging.getLogger('Router')
 
+    def __init__(self, optional_slash=False, *args, **kwargs):
+        """
+        :param optional_slash: If /'s are optional when matching directories.
+        :type optional_slash: bool
+        :param args: All non-keyword arguments.
+        :type args: tuple
+        :param kwargs: All other keyword arguments.
+        :type kwargs: dict
+        """
+        super().__init__(*args, **kwargs)
+        self._optional_slash = optional_slash
+
+    def connect(self, *args, **kwargs):
+        """
+        Overrides Mapper.connect adding in support for optional slashses.
+
+        :param args: All non-keyword arguments.
+        :type args: tuple
+        :param kwargs: All other keyword arguments.
+        :type kwargs: dict
+        """
+        # Cast to a list so we can modify the args
+        args = list(args)
+        # If we are asked to use an optional slash then find the url_path
+        # in the call. It is either the first or second element.
+        if self._optional_slash:
+            url_path_idx = 0
+            if len(args) > 1:
+                url_path_idx = 1
+            # If the url path ends with a forward slash then append the
+            # parameter regex for matching and store it in _.
+            if args[url_path_idx].endswith('/'):
+                args[url_path_idx] = args[url_path_idx][:-1] + '{_:[/]?}'
+        # Call the parent connect to do the rest of the heavy lifting.
+        super().connect(*args, **kwargs)
+
     def match(self, *args, **kwargs):
         """
         Wraps routes.Mapper.match with topic specific results.

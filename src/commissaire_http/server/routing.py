@@ -22,7 +22,7 @@ from commissaire_http.dispatcher import Dispatcher
 from commissaire_http.router import Router
 
 #: Global HTTP router for the dispatcher
-ROUTER = Router()
+ROUTER = Router(optional_slash=True)
 ROUTER.connect(
     R'/api/v0/clusters/',
     controller='commissaire_http.handlers.clusters.list_clusters',
