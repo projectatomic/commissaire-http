@@ -1,4 +1,4 @@
-kombu
-routes
-py-bcrypt
-git+https://github.com/projectatomic/commissaire.git
+kombu #license=BSD
+routes #license=MIT
+py-bcrypt #license=BSD
+git+https://github.com/projectatomic/commissaire.git #license=GPLv3
