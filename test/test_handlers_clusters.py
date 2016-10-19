@@ -22,6 +22,7 @@ from unittest import mock
 
 from . import TestCase, expected_error
 
+from commissaire import bus as _bus
 from commissaire.constants import JSONRPC_ERRORS
 from commissaire_http.handlers import create_response, clusters
 from commissaire.models import Cluster, Network, ValidationError
@@ -167,6 +168,43 @@ class Test_clusters(TestCase):
         bus.request.assert_called_with(
             'storage.save', params=[
                 'Cluster', cluster.to_dict()])
+
+    def test_delete_cluster(self):
+        """
+        Verify delete_cluster deletes existing clusters.
+        """
+        bus = mock.MagicMock()
+        bus.request.side_effect = (
+            # The delete shouldn't return anything
+            None,
+        )
+        self.assertEquals(
+            create_response(ID, []),
+            clusters.delete_cluster(SIMPLE_CLUSTER_REQUEST, bus))
+
+    def test_delete_cluster_that_does_not_exist(self):
+        """
+        Verify delete_cluster returns properly when the cluster doesn't exist.
+        """
+        bus = mock.MagicMock()
+        bus.request.side_effect = (
+            _bus.RemoteProcedureCallError('test')
+        )
+        self.assertEquals(
+            expected_error(ID, JSONRPC_ERRORS['NOT_FOUND']),
+            clusters.delete_cluster(SIMPLE_CLUSTER_REQUEST, bus))
+
+    def test_delete_cluster_on_unexpected_error(self):
+        """
+        Verify delete_cluster returns properly when an unexpected error occurs.
+        """
+        bus = mock.MagicMock()
+        bus.request.side_effect = (
+            Exception('test')
+        )
+        self.assertEquals(
+            expected_error(ID, JSONRPC_ERRORS['INTERNAL_ERROR']),
+            clusters.delete_cluster(SIMPLE_CLUSTER_REQUEST, bus))
 
     def test_list_cluster_members(self):
         """

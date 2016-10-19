@@ -17,8 +17,9 @@ Clusters handlers.
 """
 
 from commissaire import constants as C
-from commissaire_http.constants import JSONRPC_ERRORS
 from commissaire import models
+from commissaire import bus as _bus
+from commissaire_http.constants import JSONRPC_ERRORS
 
 from commissaire_http.handlers import LOGGER, create_response, return_error
 
@@ -48,6 +49,11 @@ def _register(router):
         requirements={'name': ROUTING_RX_PARAMS['name']},
         controller=create_cluster,
         conditions={'method': 'PUT'})
+    router.connect(
+        R'/api/v0/cluster/{name}/',
+        requirements={'name': ROUTING_RX_PARAMS['name']},
+        controller=delete_cluster,
+        conditions={'method': 'DELETE'})
     router.connect(
         R'/api/v0/cluster/{name}/hosts/',
         requirements={'name': ROUTING_RX_PARAMS['name']},
@@ -171,6 +177,33 @@ def create_cluster(message, bus):
         return create_response(message['id'], response['result'])
     except models.ValidationError as error:
         return return_error(message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
+
+
+def delete_cluster(message, bus):
+    """
+    Deletes an existing cluster.
+
+    :param message: jsonrpc message structure.
+    :type message: dict
+    :param bus: Bus instance.
+    :type bus: commissaire_http.bus.Bus
+    :returns: A jsonrpc structure.
+    :rtype: dict
+    """
+    try:
+        name = message['params']['name']
+        LOGGER.debug('Attempting to delete cluster "{}"'.format(name))
+        bus.request('storage.delete', params=[
+            'Cluster', {'name': name}])
+        return create_response(message['id'], [])
+    except _bus.RemoteProcedureCallError as error:
+        LOGGER.debug('Error deleting cluster: {}: {}'.format(
+            type(error), error))
+        return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
+    except Exception as error:
+        LOGGER.debug('Error deleting cluster: {}: {}'.format(
+            type(error), error))
+        return return_error(message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
 
 
 def list_cluster_members(message, bus):
