@@ -178,12 +178,15 @@ def create_host(message, bus):
                 'Cluster', cluster.to_dict(True)])
 
     try:
-        # TODO: pass this off to the bootstrap process
         host = models.Host.new(**message['params'])
         host._validate()
         bus.request(
             'storage.save', params=[
                 'Host', host.to_dict(True)])
+
+        # pass this off to the investigator
+        bus.notify('jobs.investigate', params={'address': address})
+
         return create_response(message['id'], host.to_dict())
     except models.ValidationError as error:
         return return_error(message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
@@ -205,7 +208,8 @@ def delete_host(message, bus):
         LOGGER.debug('Attempting to delete host "{}"'.format(address))
         bus.request('storage.delete', params=[
             'Host', {'address': address}])
-        # TODO: kick off service job to remove the host
+        # TODO: kick off service job to remove the host?
+
         # Remove from a cluster
         for cluster in bus.request(
                 'storage.list', params=['Clusters', True])['result']:
