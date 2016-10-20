@@ -14,10 +14,10 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 
-import base64
 import json
 
 from commissaire_http.authentication import Authenticator
+from commissaire_http.authentication import decode_basic_auth
 
 
 class HTTPBasicAuth(Authenticator):
@@ -88,28 +88,6 @@ class HTTPBasicAuth(Authenticator):
                 'Denying all access due to problem parsing '
                 'JSON file: {0}'.format(error))
 
-    def _decode_basic_auth(self, http_auth):
-        """
-        Decodes basic auth from the header.
-
-        :param req: Request instance that will be passed through.
-        :type req: falcon.Request
-        :returns: tuple -- (username, passphrase) or (None, None) if empty.
-        :rtype: tuple
-        """
-        if http_auth is not None:
-            if http_auth.lower().startswith('basic '):
-                try:
-                    decoded = tuple(base64.decodebytes(
-                        http_auth[6:].encode('utf-8')).decode().split(':'))
-                    self.logger.debug('Credentials given: {0}'.format(decoded))
-                    return decoded
-                except base64.binascii.Error:
-                    self.logger.info(
-                        'Bad base64 data sent. Setting to no user/pass.')
-        # Default meaning no user or password
-        return (None, None)
-
     def check_authentication(self, user, passwd):
         """
         Checks the user name and password from an Authorization header
@@ -149,7 +127,8 @@ class HTTPBasicAuth(Authenticator):
         :returns: True on success, False on failure
         :rtype: bool
         """
-        user, passwd = self._decode_basic_auth(
+        user, passwd = decode_basic_auth(
+            self.logger,
             environ.get('HTTP_AUTHORIZATION'))
         if user is not None and passwd is not None:
             if user in self._data.keys():

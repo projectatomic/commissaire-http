@@ -17,6 +17,7 @@ Authentication related code for Commissaire.
 """
 
 import logging
+import base64
 
 
 class Authenticator:
@@ -67,3 +68,30 @@ class Authenticator:
         :rtype: bool
         """
         return False
+
+
+def decode_basic_auth(logger, http_auth):
+    """
+    Decodes basic auth from the header string.
+
+    :param logger: logging instance
+    :type logger: Logger
+    :param http_auth: Basic authentication header
+    :type http_auth: string
+    :returns: tuple -- (username, passphrase) or (None, None) if empty.
+    :rtype: tuple
+    """
+    if http_auth is not None:
+        if http_auth.lower().startswith('basic '):
+            try:
+                decoded = tuple(base64.decodebytes(
+                    http_auth[6:].encode('utf-8')).decode().split(':'))
+                if logger:
+                    logger.debug('Credentials given: {0}'.format(decoded))
+                return decoded
+            except base64.binascii.Error:
+                if logger:
+                    logger.info(
+                        'Bad base64 data sent. Setting to no user/pass.')
+    # Default meaning no user or password
+    return (None, None)

@@ -24,22 +24,16 @@ Test cases for the commissaire_http.authentication package.
 from . import TestCase, create_environ, get_fixture_file_path
 
 from unittest import mock
+from commissaire_http.authentication import decode_basic_auth
 from commissaire_http.authentication import httpbasicauth
 from commissaire_http.authentication import httpauthclientcert
 
 
-class Test_HTTPBasicAuth(TestCase):
+class Test_SharedBasicAuth(TestCase):
     """
-    Tests for the _HTTPBasicAuth class.
+    Tests for the shared BasicAuth function.
     """
-
-    def setUp(self):
-        """
-        Sets up a fresh instance of the class before each run.
-        """
-        # Empty users dict prevents it from trying to load from etcd.
-        self.http_basic_auth = httpbasicauth.HTTPBasicAuth(None, users={})
-
+    
     def test_decode_basic_auth(self):
         """
         Verify decoding returns a filled tuple given the proper header no matter the case of basic.
@@ -48,7 +42,7 @@ class Test_HTTPBasicAuth(TestCase):
         for x in range(0, 5):
             self.assertEquals(
                 ('a', 'a'),
-                self.http_basic_auth._decode_basic_auth(
+                decode_basic_auth(None, 
                     '{0} YTph'.format(''.join(basic))))
             # Update the next letter to be capitalized
             basic[x] = basic[x].capitalize()
@@ -59,7 +53,7 @@ class Test_HTTPBasicAuth(TestCase):
         """
         self.assertEquals(
             (None, None),
-            self.http_basic_auth._decode_basic_auth('basic BADDATA'))
+            decode_basic_auth(None, 'basic BADDATA'))
 
 
 class TestHTTPBasicAuthByFile(TestCase):
