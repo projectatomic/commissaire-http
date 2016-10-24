@@ -44,6 +44,16 @@ class KeystonePassword(Authenticator):
             self.logger,
             environ.get('HTTP_AUTHORIZATION'))
 
+        # If there is no user or password then log and don't even bother
+        # keystone with a request. Fail early.
+        if user is None or passwd is None:
+            self.logger.info(
+                'Authentication can not continue due to mising '
+                'user/pass. Rejecting.')
+            self.logger.debug('User: {}, Pass: {}'.format(user, passwd))
+            self.logger.debug('Environ: {}'.format(environ))
+            return False
+
         headers = {'Content-Type': 'application/json'}
         body = {'auth': {'identity': {}}}
         ident = body['auth']['identity']
