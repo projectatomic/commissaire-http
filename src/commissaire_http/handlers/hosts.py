@@ -16,6 +16,8 @@
 Networks handlers.
 """
 
+from datetime import datetime as _dt
+
 from commissaire import bus as _bus
 from commissaire import constants as C
 from commissaire import models
@@ -186,6 +188,12 @@ def create_host(message, bus):
 
         # pass this off to the investigator
         bus.notify('jobs.investigate', params={'address': address})
+
+        # Push the host to the Watcher queue
+        watcher_record = models.WatcherRecord(
+            address=address,
+            last_check=_dt.utcnow().isoformat())
+        bus.producer.publish(watcher_record.to_json(), 'jobs.watcher')
 
         return create_response(message['id'], host.to_dict())
     except models.ValidationError as error:
