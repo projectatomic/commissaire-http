@@ -16,11 +16,6 @@
 Test cases for the commissaire_http.authentication package.
 """
 
-
-# NOTE: commenting out etcd related loading until we have the storage
-#       service
-#import etcd
-
 from . import TestCase, create_environ, get_fixture_file_path
 
 from unittest import mock
@@ -33,7 +28,13 @@ class Test_SharedBasicAuth(TestCase):
     """
     Tests for the shared BasicAuth function.
     """
-    
+
+    def setUp(self):
+        """
+        Sets up a fresh instance of the class before each run.
+        """
+        self.http_basic_auth = httpbasicauth.HTTPBasicAuth(None, users={})
+
     def test_decode_basic_auth(self):
         """
         Verify decoding returns a filled tuple given the proper header no matter the case of basic.
@@ -112,6 +113,7 @@ class TestHTTPBasicAuthByFile(TestCase):
             self.http_basic_auth.authenticate(environ, mock.MagicMock()))
 
 
+# TODO: StorageService based?
 '''
 class TestHTTPBasicAuthByEtcd(TestCase):
     """
