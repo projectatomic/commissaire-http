@@ -22,6 +22,12 @@ from . import TestCase, create_environ
 
 from commissaire_http import authentication
 
+# The response from dummy_wsgi_app
+DUMMY_WSGI_BODY = [bytes('hi', 'utf8')]
+
+def dummy_wsgi_app(environ, start_response):
+    return DUMMY_WSGI_BODY
+
 
 class Test_Authenticator(TestCase):
     """
@@ -32,7 +38,7 @@ class Test_Authenticator(TestCase):
         """
         Sets up a fresh instance of the class before each run.
         """
-        self.authenticator = authentication.Authenticator(None)
+        self.authenticator = authentication.Authenticator(dummy_wsgi_app)
 
     def test_authenticator_authenticate(self):
         """
