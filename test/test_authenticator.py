@@ -61,3 +61,13 @@ class Test_Authenticator(TestCase):
         self.authenticator.authenticate = mock.MagicMock(return_value=True)
         self.assertEquals(DUMMY_WSGI_BODY, self.authenticator(
             create_environ(), mock.MagicMock()))
+
+    def test_authenticator_WSGI_interface_with_controlling_plugin(self):
+        """
+        Verify Authenticator's WSGI interface properly works when a plugin controls responses.
+        """
+        body = [bytes('test', 'utf8')]
+        start_response = mock.MagicMock()
+        self.authenticator.authenticate = mock.MagicMock(return_value=body)
+        self.assertEquals(body, self.authenticator(
+            create_environ(), start_response))

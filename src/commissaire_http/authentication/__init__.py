@@ -49,11 +49,25 @@ class Authenticator:
         :returns: Response back to requestor.
         :rtype: list
         """
-        if self.authenticate(environ, start_response):
+        result = self.authenticate(environ, start_response)
+        # If the result is True then the authn was successful
+        if result is True:
+            self.logger.debug('{} successfully authenticated.'.format(
+                self.__class__.__name__))
             return self._app(environ, start_response)
-        else:
-            start_response('403 Forbidden', [('content-type', 'text/html')])
-            return [bytes('Forbidden', 'utf8')]
+        # If we have a list response then the plugin is handling
+        # it's own status code and response body
+        elif isinstance(result, list):
+            self.logger.debug(
+                '{} owned status code and body for failure.'.format(
+                    self.__class__.__name__))
+            return result
+        # Fall through to a generic forbidden
+        self.logger.debug('{} failed authentication.'.format(
+            self.__class__.__name__))
+        start_response(
+            '403 Forbidden', [('content-type', 'text/html')])
+        return [bytes('Forbidden', 'utf8')]
 
     def authenticate(self, environ, start_response):
         """
