@@ -46,3 +46,18 @@ class Test_Authenticator(TestCase):
         """
         self.assertFalse(self.authenticator.authenticate(
             create_environ(), mock.MagicMock()))
+
+    def test_authenticator_WSGI_interface_default_failure(self):
+        """
+        Verify Authenticator's WSGI interface properly fails authn by default.
+        """
+        self.assertEquals([bytes('Forbidden', 'utf8')], self.authenticator(
+            create_environ(), mock.MagicMock()))
+
+    def test_authenticator_WSGI_interface_allows_successes(self):
+        """
+        Verify Authenticator's WSGI interface properly allows authn success.
+        """
+        self.authenticator.authenticate = mock.MagicMock(return_value=True)
+        self.assertEquals(DUMMY_WSGI_BODY, self.authenticator(
+            create_environ(), mock.MagicMock()))
