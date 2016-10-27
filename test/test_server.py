@@ -20,8 +20,8 @@ from unittest import mock
 
 from . import TestCase
 
-from commissaire_http.authentication import Authenticator
-from commissaire_http.server.cli import main, inject_authentication
+from commissaire_http.authentication import AuthenticationManager
+from commissaire_http.server import cli
 from commissaire_http.dispatcher import Dispatcher
 
 
@@ -35,40 +35,43 @@ class TestServerCli(TestCase):
         """
         Verify the server is started when main is executed.
         """
-        main()
+        cli.main()
         _server().serve_forever.assert_called_once_with()
 
 
 class TestInjectAuthentication(TestCase):
     """
-    Tests for the inject_authentication function.
+    Tests for the cli.inject_authentication function.
     """
+
+    # def tearDown(self):
+    #     cli.DISPATCHER.dispatch.authenticators = []
 
     def test_inject_authentication_with_no_kwargs(self):
         """
-        Verify inject_authentication works when no kwargs are given.
+        Verify cli.inject_authentication works when no kwargs are given.
         """
-        result = inject_authentication(
-            'commissaire_http.authentication.httpbasicauth', {})
+        result = cli.inject_authentication(
+            {'commissaire_http.authentication.httpbasicauth': {}})
         self.assertIsInstance(result, Dispatcher)
-        self.assertIsInstance(result.dispatch, Authenticator)
+        self.assertIsInstance(result.dispatch, AuthenticationManager)
 
     def test_inject_authentication_with_kwargs(self):
         """
-        Verify inject_authentication works when kwargs are given.
+        Verify cli.inject_authentication works when kwargs are given.
         """
-        result = inject_authentication(
-            'commissaire_http.authentication.httpbasicauth',
-            'filepath=conf/users.json')
+        result = cli.inject_authentication({
+            'commissaire_http.authentication.httpbasicauth': {
+                'filepath': 'conf/users.json',
+        }})
         self.assertIsInstance(result, Dispatcher)
-        self.assertIsInstance(result.dispatch, Authenticator)
+        self.assertIsInstance(result.dispatch, AuthenticationManager)
 
     def test_inject_authentication_with_a_missing_authenticator(self):
         """
-        Verify inject_authentication raises when an authenticator doesn't exist.
+        Verify cli.inject_authentication raises when an authenticator doesn't exist.
         """
         self.assertRaises(
             ImportError,
-            inject_authentication,
-            'commissaire_http.doesnotexist',
-            {})
+            cli.inject_authentication,
+            {'commissaire_http.doesnotexist': {}})

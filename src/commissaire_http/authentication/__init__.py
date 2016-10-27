@@ -104,6 +104,62 @@ class Authenticator:
         return False
 
 
+class AuthenticationManager:
+    """
+    Handles stacking Authenticators.
+    """
+
+    def __init__(self, app, authenticators=[]):
+        """
+        Initializes a new AuthenticationManager instance.
+
+        :param app: A WSGI app to wrap.
+        :type app: instance
+        :param authenticators: Configured Authenticator instances to utilize.
+        :type authenticators: list
+        """
+        self._app = app
+        self.authenticators = authenticators
+
+    def __call__(self, environ, start_response):
+        """
+        Runs through the configured Authenticators until either a success
+        occurs or all authenticators are attempted.
+
+        :param environ: WSGI environment instance.
+        :type environ: dict
+        :param start_response: WSGI start response callable.
+        :type start_response: callable
+        :returns: Response back to requestor.
+        :rtype: list
+        """
+        # Create the fake start_response instance
+        fake_start_response = FakeStartResponse()
+        # Iterate over as many authenticators as we need to
+        authenticator_cnt = len(self.authenticators)
+        for x in range(0, authenticator_cnt):
+            # Attempt to authenticate...
+            result = self.authenticators[x].authenticate(
+                environ, fake_start_response)
+            # True means it was successful
+            if result is True:
+                return self._app(environ, start_response)
+            # If anything but True and we are at the end ...
+            elif x == authenticator_cnt - 1:
+                # if the last result was False, do a generic Forbidden
+                if result is False:
+                    start_response(
+                        '403 Forbidden', [('content-type', 'text/html')])
+                    return [bytes('Forbidden', 'utf8')]
+                # Otherwise the plugin handled it's own start_response and
+                # return data. Pull from the fake_start_response and return
+                # the result from authenticate.
+                else:
+                    start_response(
+                        fake_start_response.body, fake_start_response.headers)
+                    return result
+
+
 def decode_basic_auth(logger, http_auth):
     """
     Decodes basic auth from the header string.

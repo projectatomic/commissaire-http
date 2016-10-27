@@ -20,12 +20,15 @@ import argparse
 import importlib
 import logging
 
-from commissaire_http.server.routing import DISPATCHER
+from commissaire_http.authentication import (
+    AuthenticationManager, Authenticator)
+from commissaire_http.server.routing import DISPATCHER  # noqa
 from commissaire_http import CommissaireHttpServer, parse_args
 
 
 # TODO: Make this configurable
 for name in (
+        'authentication',
         'Dispatcher', 'Router', 'Bus', 'CommissaireHttpServer', 'Handlers'):
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
@@ -36,7 +39,7 @@ for name in (
 # --
 
 
-def inject_authentication(plugin, kwargs):
+def inject_authentication(plugins):
     """
     Injects authentication into the dispatcher's dispatch method.
 
@@ -47,23 +50,26 @@ def inject_authentication(plugin, kwargs):
     :returns: A wrapped Dispatcher instance
     :rtype: commissaire.dispatcher.Dispatcher
     """
-    module = importlib.import_module(plugin)
-    authentication_class = getattr(module, 'AuthenticationPlugin')
+    global DISPATCHER
+    authn_manager = AuthenticationManager(DISPATCHER.dispatch)
+    for name in plugins:
+        module = importlib.import_module(name)
+        authentication_class = getattr(module, 'AuthenticationPlugin')
+        # NOTE: We set the app to None as we are not using the
+        #       authentication_class as the dispatcher itself
+        authn_manager.authenticators.append(
+            authentication_class(None, **plugins[name]))
 
-    authentication_kwargs = {}
-    if type(kwargs) is str:
-        if '=' in kwargs:
-            for item in kwargs.split(','):
-                key, value = item.split('=')
-                authentication_kwargs[key.strip()] = value.strip()
-    elif type(kwargs) is dict:
-        # _read_config_file() sets this up.
-        authentication_kwargs = kwargs
+    # If there are no authentication managers defined, append the default
+    # which will deny all requests
+    if len(authn_manager.authenticators) == 0:
+        print(
+            'No authentication plugins found. Denying all requests.')
+        authn_manager.authenticators.append(Authenticator(None))
 
     # NOTE: We wrap only the dispatch method, not the entire
     #       dispatcher instance.
-    DISPATCHER.dispatch = authentication_class(
-        DISPATCHER.dispatch, **authentication_kwargs)
+    DISPATCHER.dispatch = authn_manager
     return DISPATCHER
 
 
@@ -71,15 +77,16 @@ def main():
     """
     Main entry point.
     """
+    # Use the same dispatcher
+    global DISPATCHER
+
     epilog = 'Example: commissaire -c conf/myconfig.json'
     parser = argparse.ArgumentParser(epilog=epilog)
     args = parse_args(parser)
 
     try:
         # Inject the authentication plugin
-        if args.authentication_plugin:
-            DISPATCHER = inject_authentication(
-                args.authentication_plugin, args.authentication_plugin_kwargs)
+        DISPATCHER = inject_authentication(args.authentication_plugins)
 
         # Create the server
         server = CommissaireHttpServer(
@@ -101,7 +108,7 @@ def main():
         pass
     except ImportError:
         parser.error('Could not import "{}" for authentication'.format(
-            args.authentication_plugin))
+            args.authentication_plugins))
     except Exception as error:  # pragma: no cover
         from traceback import print_exc
         print_exc()
