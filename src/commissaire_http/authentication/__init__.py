@@ -19,6 +19,8 @@ Authentication related code for Commissaire.
 import logging
 import base64
 
+from commissaire_http.util.wsgi import FakeStartResponse
+
 
 class Authenticator:
     """
@@ -50,7 +52,8 @@ class Authenticator:
         :returns: Response back to requestor.
         :rtype: list
         """
-        result = self.authenticate(environ, start_response)
+        fake_start_response = FakeStartResponse()
+        result = self.authenticate(environ, fake_start_response)
         # If the result is True then the authn was successful
         if result is True:
             self.logger.debug('{} successfully authenticated.'.format(
@@ -60,12 +63,19 @@ class Authenticator:
         # it's own status code and response body
         elif isinstance(result, list):
             self.logger.debug(
-                '{} owned status code and body.'.format(
-                    self.__name))
+                '{} owned status code and body: {}'.format(
+                    self.__name, fake_start_response))
+            # If the code returned is a 2xx then it's successful authn
+            if fake_start_response.code.startswith('2'):
+                return self._app(environ, start_response)
+            # Otherwise use the code and headers from the
+            # fake start response instance
+            start_response(
+                fake_start_response.code,
+                fake_start_response.headers)
             return result
         # Fall through to a generic forbidden
-        self.logger.debug('{} failed authentication.'.format(
-            self.__name))
+        self.logger.debug('{} failed authentication.'.format(self.__name))
         start_response(
             '403 Forbidden', [('content-type', 'text/html')])
         return [bytes('Forbidden', 'utf8')]
