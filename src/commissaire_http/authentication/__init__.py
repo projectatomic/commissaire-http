@@ -36,6 +36,7 @@ class Authenticator:
         :type app: instance
         """
         self._app = app
+        self.__name = self.__class__.__name__
 
     def __call__(self, environ, start_response):
         """
@@ -53,18 +54,18 @@ class Authenticator:
         # If the result is True then the authn was successful
         if result is True:
             self.logger.debug('{} successfully authenticated.'.format(
-                self.__class__.__name__))
+                self.__name))
             return self._app(environ, start_response)
         # If we have a list response then the plugin is handling
         # it's own status code and response body
         elif isinstance(result, list):
             self.logger.debug(
-                '{} owned status code and body for failure.'.format(
-                    self.__class__.__name__))
+                '{} owned status code and body.'.format(
+                    self.__name))
             return result
         # Fall through to a generic forbidden
         self.logger.debug('{} failed authentication.'.format(
-            self.__class__.__name__))
+            self.__name))
         start_response(
             '403 Forbidden', [('content-type', 'text/html')])
         return [bytes('Forbidden', 'utf8')]
