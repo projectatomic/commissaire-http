@@ -25,6 +25,7 @@ from wsgiref.simple_server import WSGIServer, WSGIRequestHandler, make_server
 
 from commissaire.util.config import read_config_file
 from commissaire_http.bus import Bus
+from commissaire_http.util.cli import parse_to_struct
 
 
 def parse_args(parser):
@@ -65,15 +66,10 @@ def parse_args(parser):
         help='Full path to the TLS file containing the certificate '
              'authorities that client certificates should be verified against')
     parser.add_argument(
-        '--authentication-plugin', type=str,
-        default='commissaire_http.authentication.httpbasicauth',
-        metavar='MODULE_NAME',
-        help=('Authentication Plugin module. '
-              'EX: commissaire.authentication.httpbasicauth'))
-    parser.add_argument(
-        '--authentication-plugin-kwargs', type=str, default={},
-        metavar='KEYWORD_ARGS',
-        help='Authentication Plugin configuration (key=value,...)')
+        '--authentication-plugin', action='append',
+        dest='authentication_plugins',
+        metavar='MODULE_NAME:key=value,..', type=parse_to_struct,
+        help=('Authentication Plugin module and configuration.'))
     parser.add_argument(
         '--bus-exchange', type=str, default='commissaire',
         help='Message bus exchange name.')
@@ -88,11 +84,17 @@ def parse_args(parser):
     # the --config-file option, and again with the config file content as
     # a baseline.
     args = parser.parse_args()
+
     if not args.no_config_file:
         # Change dashes to underscores
         json_object = {k.replace('-', '_'): v for k, v in read_config_file(
             args.config_file).items()}
         args = parser.parse_args(namespace=Namespace(**json_object))
+    else:
+        configured_plugins = {}
+        for auth_plugin in args.authentication_plugins:
+            configured_plugins.update(auth_plugin)
+        args.authentication_plugins = configured_plugins
     return args
 
 
