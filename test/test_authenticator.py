@@ -21,11 +21,18 @@ from unittest import mock
 from . import TestCase, create_environ
 
 from commissaire_http import authentication
+from commissaire_http.util.wsgi import FakeStartResponse
+
 
 # The response from dummy_wsgi_app
 DUMMY_WSGI_BODY = [bytes('hi', 'utf8')]
 
+# The start_response args
+START_RESPONSE_ARGS = ('200 OK', [('test', 'header')])
+
+# Dummy wsgi app to test with
 def dummy_wsgi_app(environ, start_response):
+    start_response(*START_RESPONSE_ARGS)
     return DUMMY_WSGI_BODY
 
 
@@ -66,8 +73,10 @@ class Test_Authenticator(TestCase):
         """
         Verify Authenticator's WSGI interface properly works when a plugin controls responses.
         """
-        body = [bytes('test', 'utf8')]
         start_response = mock.MagicMock()
-        self.authenticator.authenticate = mock.MagicMock(return_value=body)
-        self.assertEquals(body, self.authenticator(
-            create_environ(), start_response))
+        # We can use the dummy_wsgi_app as a fake authenticator to test with
+        self.authenticator.authenticate = dummy_wsgi_app
+        self.assertEquals(
+            DUMMY_WSGI_BODY,
+            self.authenticator(create_environ(), start_response))
+        start_response.assert_called_once_with(*START_RESPONSE_ARGS)

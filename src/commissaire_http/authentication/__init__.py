@@ -55,25 +55,34 @@ class Authenticator:
         fake_start_response = FakeStartResponse()
         result = self.authenticate(environ, fake_start_response)
         # If the result is True then the authn was successful
-        if result is True:
-            self.logger.debug('{} successfully authenticated.'.format(
-                self.__name))
-            return self._app(environ, start_response)
-        # If we have a list response then the plugin is handling
-        # it's own status code and response body
-        elif isinstance(result, list):
+        # The plugin is handling it's own response
+        if fake_start_response.call_count > 0:
             self.logger.debug(
-                '{} owned status code and body: {}'.format(
+                '{} owned status code: {}'.format(
                     self.__name, fake_start_response))
+
             # If the code returned is a 2xx then it's successful authn
             if fake_start_response.code.startswith('2'):
-                return self._app(environ, start_response)
-            # Otherwise use the code and headers from the
-            # fake start response instance
+                app_start_response = FakeStartResponse()
+                result = self._app(environ, app_start_response)
+
+                # Merge headers
+                new_headers = dict(fake_start_response.headers)
+                for header, value in app_start_response.headers:
+                    new_headers[header] = value
+                fake_start_response.headers = list(new_headers.items())
+
+            # Send the header responses back
             start_response(
                 fake_start_response.code,
                 fake_start_response.headers)
             return result
+
+        elif result is True:
+            self.logger.debug('{} successfully authenticated.'.format(
+                self.__name))
+            return self._app(environ, start_response)
+
         # Fall through to a generic forbidden
         self.logger.debug('{} failed authentication.'.format(self.__name))
         start_response(
