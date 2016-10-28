@@ -39,7 +39,7 @@ class FakeStartResponse:
         :param headers: Headers that would normally be sent.
         :type headers: tuple
         """
-        self.call_count += self.call_count
+        self.call_count += 1
         self.code = code
         self.headers = headers
 
