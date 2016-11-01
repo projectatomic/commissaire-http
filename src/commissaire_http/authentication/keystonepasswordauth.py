@@ -83,7 +83,12 @@ class KeystonePassword(Authenticator):
             data=json.dumps(body),
             headers=headers)
 
-        if 'X-Subject-Token' in response.headers:
+        subject_token_name = 'X-Subject-Token'
+        if subject_token_name in response.headers:
+            token = response.headers[subject_token_name]
+            start_response('200 OK', [
+                           ('content-type', 'application/json'),
+                           (subject_token_name, token)])
             return True
 
         # Forbid by default
