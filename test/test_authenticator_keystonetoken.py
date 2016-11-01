@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
-Test cases for the commissaire_http.authentication.keystonepasswordauth module.
+Test cases for the commissaire_http.authentication.keystonetokenauth module.
 """
 
 import requests
@@ -22,38 +22,37 @@ from . import TestCase, create_environ
 
 from unittest import mock
 
-from commissaire_http.authentication import decode_basic_auth
-from commissaire_http.authentication import httpbasicauth
-from commissaire_http.authentication import keystonepasswordauth
+from commissaire_http.authentication import keystonetokenauth
 
 
 # Reusable environ for tests
+TOKEN = '69120179c8e747e3ae8c68c00ec56eb6'
 ENVIRON = create_environ(
-    headers={'HTTP_AUTHORIZATION': 'basic YTph'})
+    headers={'HTTP_X_AUTH_TOKEN': TOKEN})
 
 # Reusable keystone success response
 SUCCESS_RESPONSE = requests.Response()
-SUCCESS_RESPONSE.headers['X-Subject-Token'] = 'token'
+SUCCESS_RESPONSE.headers['X-Subject-Token'] = TOKEN
 
 # Reusable keystone failure response
 FAILURE_RESPONSE = requests.Response()
 
 
-class TestKeystonePassword(TestCase):
+class TestKeystoneToken(TestCase):
     """
-    Tests for the KeystonePassword class.
+    Tests for the KeystoneToken class.
     """
 
     def setUp(self):
         """
         Sets up a fresh instance of the class before each run.
         """
-        self.keystone_password_auth = keystonepasswordauth.KeystonePassword(
-            None, 'https://example.com/v3/auth/tokens', 'Default')
+        self.keystone_token_auth = keystonetokenauth.KeystoneToken(
+            None, 'https://example.com/v3/auth/tokens')
 
-    def test_authenticate_with_valid_user(self):
+    def test_authenticate_with_valid_token(self):
         """
-        Keystone Password: Verify a valid user authenticates successfully.
+        Keystone Token: Verify a valid token authenticates successfully.
         """
         # patch the post function
         with mock.patch('requests.post') as _post:
@@ -61,14 +60,14 @@ class TestKeystonePassword(TestCase):
             _post.return_value = SUCCESS_RESPONSE
 
             # Run the authenticate method
-            result = self.keystone_password_auth.authenticate(
+            result = self.keystone_token_auth.authenticate(
                 ENVIRON, mock.MagicMock())
             # True means successful authn
             self.assertTrue(result)
 
-    def test_authenticate_with_invalid_user(self):
+    def test_authenticate_with_invalid_token(self):
         """
-        Keystone Password: Verify an invalid user fails authentication.
+        Keystone Token: Verify an invalid token fails authentication.
         """
         # patch the post function
         with mock.patch('requests.post') as _post:
@@ -76,14 +75,14 @@ class TestKeystonePassword(TestCase):
             _post.return_value = FAILURE_RESPONSE
 
             # Run the authenticate method
-            result = self.keystone_password_auth.authenticate(
+            result = self.keystone_token_auth.authenticate(
                 ENVIRON, mock.MagicMock())
             # True means successful authn
             self.assertFalse(result)
 
     def test_authenticate_with_invalid_data(self):
         """
-        Keystone Password: Verify missing data does not successfully allow authentication.
+        Keystone Token: Verify missing data does not successfully allow authentication.
         """
         with mock.patch('requests.post') as _post:
             # We give the response a token even though it should never get
@@ -92,8 +91,8 @@ class TestKeystonePassword(TestCase):
             # test failure
             _post.return_value = SUCCESS_RESPONSE
 
-            # Run the authenticate method without HTTP_AUTHORIZATION
-            result = self.keystone_password_auth.authenticate(
+            # Run the authenticate method without HTTP_X_AUTH_TOKEN
+            result = self.keystone_token_auth.authenticate(
                 create_environ(), mock.MagicMock())
             # True means successful authn
             self.assertFalse(result)
