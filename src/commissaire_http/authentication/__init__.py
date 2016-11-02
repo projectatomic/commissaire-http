@@ -135,29 +135,28 @@ class AuthenticationManager:
         """
         # Create the fake start_response instance
         fake_start_response = FakeStartResponse()
-        # Iterate over as many authenticators as we need to
-        authenticator_cnt = len(self.authenticators)
-        for x in range(0, authenticator_cnt):
+
+        result = False
+
+        for authenticator in self.authenticators:
             # Attempt to authenticate...
-            result = self.authenticators[x].authenticate(
-                environ, fake_start_response)
+            result = authenticator.authenticate(environ, fake_start_response)
             # True means it was successful
             if result is True:
                 return self._app(environ, start_response)
-            # If anything but True and we are at the end ...
-            elif x == authenticator_cnt - 1:
-                # if the last result was False, do a generic Forbidden
-                if result is False:
-                    start_response(
-                        '403 Forbidden', [('content-type', 'text/html')])
-                    return [bytes('Forbidden', 'utf8')]
-                # Otherwise the plugin handled it's own start_response and
-                # return data. Pull from the fake_start_response and return
-                # the result from authenticate.
-                else:
-                    start_response(
-                        fake_start_response.body, fake_start_response.headers)
-                    return result
+
+        # If the last result was False, do a generic Forbidden.
+        if result is False:
+            start_response(
+                '403 Forbidden', [('content-type', 'text/html')])
+            return [bytes('Forbidden', 'utf8')]
+        # Otherwise the plugin handled it's own start_response and
+        # return data. Pull from the fake_start_response and return
+        # the result from authenticate.
+        else:
+            start_response(
+                fake_start_response.body, fake_start_response.headers)
+            return result
 
 
 def decode_basic_auth(logger, http_auth):
