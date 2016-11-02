@@ -98,3 +98,65 @@ class Test_AuthenticationManager(TestCase):
         self.assertEquals(DUMMY_WSGI_BODY, self.authenticator(
             create_environ(), start_response))
         start_response.assert_called_once_with(*sr_args)
+
+    def test_authentication_manager_multi_simple_deny(self):
+        """
+        Verify AuthenticationManager handles the simple forbidden case with multiple authenticators.
+        """
+        start_response = mock.MagicMock()
+        self.authentication_manager.authenticators.append(self.authenticator)
+        result = self.authentication_manager(create_environ(), start_response)
+        self.assertEquals([bytes('Forbidden', 'utf8')], result)
+        start_response.assert_called_once_with('403 Forbidden', mock.ANY)
+
+    def test_authentication_manager_multi_simple_allow(self):
+        """
+        Verify AuthenticationManager handles the simple allow case with multiple authenticators.
+        """
+        start_response = mock.MagicMock()
+        self.authentication_manager.authenticators = [
+            mock.MagicMock(authenticate=mock.MagicMock(return_value=False)),
+            mock.MagicMock(authenticate=mock.MagicMock(return_value=True)),
+        ]
+        result = self.authentication_manager(create_environ(), start_response)
+        self.assertEquals(DUMMY_WSGI_BODY, result)
+        start_response.assert_called_once_with('200 OK', mock.ANY)
+
+    def test_authentication_manager_multi_complex_deny(self):
+        """
+        Verify AuthenticationManager handles the complex forbidden case with multiple authenticators.
+        """
+        start_response = mock.MagicMock()
+        response_code = '402 Payment Required'
+        expected_result = [bytes('$$$', 'utf8')]
+        def complex_auth(environ, start_response):
+            start_response(response_code, [])
+            return expected_result
+
+        self.authentication_manager.authenticators = [
+            mock.MagicMock(authenticate=mock.MagicMock(return_value=False)),
+            mock.MagicMock(authenticate=complex_auth),
+            mock.MagicMock(authenticate=mock.MagicMock(return_value=False)),
+        ]
+        result = self.authentication_manager(create_environ(), start_response)
+        self.assertEquals(expected_result, result)
+        start_response.assert_called_once_with(response_code, mock.ANY)
+
+    def test_authentication_manager_multi_complex_allow(self):
+        """
+        Verify AuthenticationManager handles the complex allow case with multiple authenticators.
+        """
+        expected_result = [bytes('itrustyou', 'utf8')]
+        def complex_auth(environ, start_response):
+            start_response('200 OK', [])
+            return expected_result
+
+        start_response = mock.MagicMock()
+        self.authentication_manager.authenticators = [
+            mock.MagicMock(authenticate=mock.MagicMock(return_value=False)),
+            mock.MagicMock(authenticate=complex_auth),
+            mock.MagicMock(authenticate=mock.MagicMock(return_value=False)),
+        ]
+        result = self.authentication_manager(create_environ(), start_response)
+        self.assertEquals(expected_result, result)
+        start_response.assert_called_once_with('200 OK', mock.ANY)

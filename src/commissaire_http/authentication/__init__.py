@@ -109,6 +109,9 @@ class AuthenticationManager:
     Handles stacking Authenticators.
     """
 
+    #: Logger for AuthenticationManager
+    logger = logging.getLogger('AuthenticationManager')
+
     def __init__(self, app, authenticators=[]):
         """
         Initializes a new AuthenticationManager instance.
@@ -143,20 +146,28 @@ class AuthenticationManager:
             result = authenticator.authenticate(environ, fake_start_response)
             # True means it was successful
             if result is True:
+                self.logger.debug('{} succeeded authentication.'.format(
+                    authenticator.__class__.__name__))
                 return self._app(environ, start_response)
+            # The plugin handled it's own start_response and
+            # return data. Pull from the fake_start_response and return
+            # the result from authenticate.
+            elif isinstance(
+                    result, list) and fake_start_response.call_count > 0:
+                self.logger.debug('{} succeeded authentication.'.format(
+                    authenticator.__class__.__name__))
+                self.logger.debug('Response: {}'.format(fake_start_response))
+                start_response(
+                    fake_start_response.code, fake_start_response.headers)
+                return result
+            else:
+                self.logger.debug('{} failed authentication: {}'.format(
+                    authenticator.__class__.__name__, result))
 
-        # If the last result was False, do a generic Forbidden.
-        if result is False:
-            start_response(
-                '403 Forbidden', [('content-type', 'text/html')])
-            return [bytes('Forbidden', 'utf8')]
-        # Otherwise the plugin handled it's own start_response and
-        # return data. Pull from the fake_start_response and return
-        # the result from authenticate.
-        else:
-            start_response(
-                fake_start_response.body, fake_start_response.headers)
-            return result
+        # Else fall through to a generic Forbidden.
+        start_response(
+            '403 Forbidden', [('content-type', 'text/html')])
+        return [bytes('Forbidden', 'utf8')]
 
 
 def decode_basic_auth(logger, http_auth):

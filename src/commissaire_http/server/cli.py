@@ -28,7 +28,7 @@ from commissaire_http import CommissaireHttpServer, parse_args
 
 # TODO: Make this configurable
 for name in (
-        'authentication',
+        'authentication', 'AuthenticationManager',
         'Dispatcher', 'Router', 'Bus', 'CommissaireHttpServer', 'Handlers'):
     logger = logging.getLogger(name)
     logger.setLevel(logging.DEBUG)
