@@ -78,10 +78,15 @@ class KeystonePassword(Authenticator):
             'password': passwd,
             'domain': {'name': self.domain}}}
 
-        response = requests.post(
-            self.url,
-            data=json.dumps(body),
-            headers=headers)
+        try:
+            response = requests.post(
+                self.url,
+                data=json.dumps(body),
+                headers=headers)
+        except requests.exceptions.BaseHTTPError as error:
+            self.logger.error('Could not reach {}. Denying access. {}: {}'
+                              .format(self.url, type(error), error))
+            return False
 
         subject_token_name = 'X-Subject-Token'
         if subject_token_name in response.headers:
