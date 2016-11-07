@@ -1,0 +1,12 @@
+[Unit]
+Description=Commissaire Manager REST Server
+Documentation=https://commissaire.readthedocs.io/
+After=network.target
+
+[Service]
+ExecStart=/usr/bin/commissaire-server -c /etc/commisasire/commissaire.conf
+PIDFile=/var/run/commissaire.pid
+Type=simple
+
+[Install]
+WantedBy = multi-user.target
