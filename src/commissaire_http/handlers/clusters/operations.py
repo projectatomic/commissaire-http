@@ -118,11 +118,10 @@ def create_cluster_deploy(message, bus):
             version=message['params'].get('version'))
         cluster_deploy._validate()
 
-        # TODO: Hook up cluster deploy service call
-
         result = bus.request(
-            'storage.save', params=[
-                'ClusterDeploy', cluster_deploy.to_dict()])
+            'jobs.clusterexec.deploy', params=[
+                cluster_deploy.name,
+                cluster_deploy.version])
         return create_response(message['id'], result['result'])
     except models.ValidationError as error:
         LOGGER.info('Invalid data provided. "{}"'.format(error))
@@ -159,7 +158,8 @@ def create_cluster_upgrade(message, bus):  # pragma: no cover
     :returns: A jsonrpc structure.
     :rtype: dict
     """
-    return create_cluster_operation(models.ClusterUpgrade, message, bus)
+    return create_cluster_operation(
+        models.ClusterUpgrade, message, bus, 'jobs.clusterexec.upgrade')
 
 
 def get_cluster_restart(message, bus):  # pragma: no cover
@@ -187,7 +187,8 @@ def create_cluster_restart(message, bus):  # pragma: no cover
     :returns: A jsonrpc structure.
     :rtype: dict
     """
-    return create_cluster_operation(models.ClusterRestart, message, bus)
+    return create_cluster_operation(
+        models.ClusterRestart, message, bus, 'jobs.clusterexec.restart')
 
 
 def get_cluster_operation(model_cls, message, bus):
@@ -222,7 +223,7 @@ def get_cluster_operation(model_cls, message, bus):
         return return_error(message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
 
 
-def create_cluster_operation(model_cls, message, bus):
+def create_cluster_operation(model_cls, message, bus, routing_key):
     """
     Creates a new operation based on the model_cls.
 
@@ -233,6 +234,8 @@ def create_cluster_operation(model_cls, message, bus):
     :param bus: Bus instance.
     :type bus: commissaire_http.bus.Bus
     :returns: A jsonrpc structure.
+    :param routing_key: Routing key for the cluster operation request.
+    :type routing_key: str
     :rtype: dict
     """
 
@@ -254,13 +257,8 @@ def create_cluster_operation(model_cls, message, bus):
             started_at=datetime.datetime.utcnow().isoformat())
         model._validate()
 
-        # TODO: Hook up service call
-        # if isinstance(model_cls, models.ClusterUpgrade):
-        # elif isinstance(models_cls, models.ClusterRestart):
-
-        result = bus.request(
-            'storage.save', params=[
-                model_cls.__name__, model.to_dict()])
+        # XXX Assumes the only method argument is cluster_name.
+        result = bus.request(routing_key, params=[cluster_name])
         return create_response(message['id'], result['result'])
     except models.ValidationError as error:
         LOGGER.info('Invalid data provided. "{}"'.format(error))

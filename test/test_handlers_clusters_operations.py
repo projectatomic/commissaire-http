@@ -216,7 +216,8 @@ class Test_get_cluster_operation(TestCase):
             self.assertEquals(
                 create_response(ID, model_instance.to_dict()),
                 operations.create_cluster_operation(
-                    model_instance.__class__, request, bus))
+                    model_instance.__class__,
+                    request, bus, 'phony_routing_key'))
 
     def test_create_cluster_operation_with_missing_cluster(self):
         """
@@ -231,7 +232,8 @@ class Test_get_cluster_operation(TestCase):
             self.assertEquals(
                 expected_error(ID, JSONRPC_ERRORS['NOT_FOUND']),
                 operations.create_cluster_operation(
-                    model_instance.__class__, request, bus))
+                    model_instance.__class__,
+                    request, bus, 'phony_routing_key'))
 
     def test_create_cluster_operation_with_invalid_data(self):
         """
@@ -244,7 +246,8 @@ class Test_get_cluster_operation(TestCase):
             self.assertEquals(
                 expected_error(ID, JSONRPC_ERRORS['INVALID_REQUEST']),
                 operations.create_cluster_operation(
-                    model_instance.__class__, BAD_CLUSTER_OPERATION, bus))
+                    model_instance.__class__,
+                    BAD_CLUSTER_OPERATION, bus, 'phony_routing_key'))
 
     def test_create_cluster_operation_with_rpc_error(self):
         """
@@ -263,4 +266,5 @@ class Test_get_cluster_operation(TestCase):
             self.assertEquals(
                 expected_error(ID, JSONRPC_ERRORS['INTERNAL_ERROR']),
                 operations.create_cluster_operation(
-                    model_instance.__class__, request, bus))
+                    model_instance.__class__,
+                    request, bus, 'phony_routing_key'))
