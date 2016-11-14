@@ -46,6 +46,9 @@ def parse_args(parser):
     # Do not use required=True because it would preclude such
     # arguments from being specified in a configuration file.
     parser.add_argument(
+        '--debug', action='store_true',
+        help='Turn on debug logging to stdout')
+    parser.add_argument(
         '--config-file', '-c', type=str,
         help='Full path to a JSON configuration file '
              '(command-line arguments override)')

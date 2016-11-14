@@ -18,25 +18,13 @@ Commissaire HTTP based application server.
 """
 import argparse
 import importlib
-import logging
+
+from commissaire.util.logging import setup_logging
 
 from commissaire_http.authentication import (
     AuthenticationManager, Authenticator)
 from commissaire_http.server.routing import DISPATCHER  # noqa
 from commissaire_http import CommissaireHttpServer, parse_args
-
-
-# TODO: Make this configurable
-for name in (
-        'authentication', 'AuthenticationManager',
-        'Dispatcher', 'Router', 'Bus', 'CommissaireHttpServer', 'Handlers'):
-    logger = logging.getLogger(name)
-    logger.setLevel(logging.DEBUG)
-    handler = logging.StreamHandler()
-    handler.setFormatter(logging.Formatter(
-        '%(name)s(%(levelname)s): %(message)s'))
-    logger.handlers.append(handler)
-# --
 
 
 def inject_authentication(plugins):
@@ -83,6 +71,15 @@ def main():
     epilog = 'Example: commissaire -c conf/myconfig.json'
     parser = argparse.ArgumentParser(epilog=epilog)
     args = parse_args(parser)
+
+    components = ('authentication',
+                  'AuthenticationManager',
+                  'Dispatcher',
+                  'Router',
+                  'Bus',
+                  'CommissaireHttpServer',
+                  'Handlers')
+    setup_logging(args, components)
 
     try:
         # Inject the authentication plugin
