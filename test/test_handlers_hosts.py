@@ -314,7 +314,7 @@ class Test_hosts(TestCase):
         bus = mock.MagicMock()
         bus.request.return_value = create_response(ID, HOST.to_dict())
         host_status = HostStatus.new(
-            host={'last_check': '', 'status': ''}, type=C.CLUSTER_TYPE_HOST)
+            host={'last_check': '', 'status': ''}, type='host_only')
         self.assertEquals(
             create_response(ID, host_status.to_dict()),
             hosts.get_host_status(SIMPLE_HOST_REQUEST, bus))

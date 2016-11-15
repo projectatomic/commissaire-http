@@ -1,0 +1,170 @@
+# Copyright (C) 2016  Red Hat, Inc
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+Test for commissaire_http.handlers.container_managers module.
+"""
+
+from unittest import mock
+
+from . import TestCase, expected_error
+
+from commissaire import bus as _bus
+from commissaire.constants import JSONRPC_ERRORS
+from commissaire_http.handlers import container_managers, create_response
+from commissaire.models import ContainerManagerConfig, ContainerManagerConfigs
+
+# Globals reused in network tests
+#: Message ID
+ID = '123'
+#: Generic ContainerManagerConfig instance
+CONTAINER_MANAGER_CONFIG = ContainerManagerConfig.new(name='test')
+#: Generic jsonrpc network request by name
+SIMPLE_CONTAINER_MANAGER_CONFIG_REQUEST = {
+    'jsonrpc': '2.0',
+    'id': ID,
+    'params': {'name': 'test'},
+}
+
+
+class Test_container_managers(TestCase):
+    """
+    Test for the container_managers handlers.
+    """
+
+    def test_list_container_managers(self):
+        """
+        Verify list_container_managers responds with the right information.
+        """
+        bus = mock.MagicMock()
+        bus.request.return_value = {
+            'jsonrpc': '2.0',
+            'result': [CONTAINER_MANAGER_CONFIG.to_dict()],
+            'id': ID}
+        self.assertEquals(
+            create_response(ID, ['test']),
+            container_managers.list_container_managers(
+                bus.request.return_value, bus))
+
+    def test_get_container_manager(self):
+        """
+        Verify get_container_manager responds with the right information.
+        """
+        bus = mock.MagicMock()
+        bus.request.return_value = create_response(
+            ID, CONTAINER_MANAGER_CONFIG.to_dict())
+        self.assertEquals(
+            create_response(ID, CONTAINER_MANAGER_CONFIG.to_dict()),
+            container_managers.get_container_manager(
+                SIMPLE_CONTAINER_MANAGER_CONFIG_REQUEST, bus))
+
+    def test_get_missing_container_manager(self):
+        """
+        Verify get_container_manager responds with 404 when it does not exist.
+        """
+        bus = mock.MagicMock()
+        bus.request.side_effect = _bus.RemoteProcedureCallError('test')
+        self.assertEquals(
+            expected_error(ID, JSONRPC_ERRORS['NOT_FOUND']),
+            container_managers.get_container_manager(
+                SIMPLE_CONTAINER_MANAGER_CONFIG_REQUEST, bus))
+
+
+    def test_create_container_manager(self):
+        """
+        Verify create_container_manager can create a new ContainerManagerConfig.
+        """
+        bus = mock.MagicMock()
+        bus.request.side_effect = (
+            # ContainerManagerConfig doesn't yet exist
+            _bus.RemoteProcedureCallError('test'),
+            # Creation response
+            create_response(ID, CONTAINER_MANAGER_CONFIG.to_dict()))
+        self.assertEquals(
+            create_response(ID, CONTAINER_MANAGER_CONFIG.to_dict()),
+            container_managers.create_container_manager(
+                SIMPLE_CONTAINER_MANAGER_CONFIG_REQUEST, bus))
+
+    def test_create_container_manager_idempotent(self):
+        """
+        Verify create_container_manager acts idempotent.
+        """
+        bus = mock.MagicMock()
+        bus.request.side_effect = (
+            # Network exists
+            create_response(ID, CONTAINER_MANAGER_CONFIG.to_dict()),
+            # Creation response
+            create_response(ID, CONTAINER_MANAGER_CONFIG.to_dict()))
+        self.assertEquals(
+            create_response(ID, CONTAINER_MANAGER_CONFIG.to_dict()),
+            container_managers.create_container_manager(
+                SIMPLE_CONTAINER_MANAGER_CONFIG_REQUEST, bus))
+
+    def test_create_container_manager_conflict(self):
+        """
+        Verify create_container_manager rejects conflicting creation.
+        """
+        bus = mock.MagicMock()
+        bus.request.return_value = {
+                'jsonrpc': '2.0',
+                'result': ContainerManagerConfig.new(
+                    name=CONTAINER_MANAGER_CONFIG.name,
+                    options={'test': 'test'}).to_dict(),
+                'id': ID,
+            }
+        self.assertEquals(
+            expected_error(ID, JSONRPC_ERRORS['CONFLICT']),
+            container_managers.create_container_manager(
+                SIMPLE_CONTAINER_MANAGER_CONFIG_REQUEST, bus))
+
+    def test_delete_container_manager(self):
+        """
+        Verify delete_container_manager deletes existing ContainerManagerConfig.
+        """
+        bus = mock.MagicMock()
+        bus.request.return_value = None
+        self.assertEquals(
+            {
+                'jsonrpc': '2.0',
+                'result': [],
+                'id': '123',
+            },
+            container_managers.delete_container_manager(
+                SIMPLE_CONTAINER_MANAGER_CONFIG_REQUEST, bus))
+
+    def test_delete_container_manager_not_found_on_missing_key(self):
+        """
+        Verify delete_container_manager returns 404 on a missing ContainerManagerConfig.
+        """
+        bus = mock.MagicMock()
+        bus.request.side_effect = _bus.RemoteProcedureCallError('test')
+
+        self.assertEquals(
+            expected_error(ID, JSONRPC_ERRORS['NOT_FOUND']),
+            container_managers.delete_container_manager(
+                SIMPLE_CONTAINER_MANAGER_CONFIG_REQUEST, bus))
+
+    def test_delete_container_manager_internal_error_on_exception(self):
+        """
+        Verify delete_container_manager returns ISE on any other exception
+        """
+        # Iterate over a few errors
+        for error in (Exception, KeyError, TypeError):
+            bus = mock.MagicMock()
+            bus.request.side_effect = error('test')
+
+            self.assertEquals(
+                expected_error(ID, JSONRPC_ERRORS['INTERNAL_ERROR']),
+                container_managers.delete_container_manager(
+                    SIMPLE_CONTAINER_MANAGER_CONFIG_REQUEST, bus))

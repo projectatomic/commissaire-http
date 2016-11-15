@@ -89,7 +89,7 @@ class Test_clusters(TestCase):
                 'hosts': {'available': 0, 'total': 0, 'unavailable': 0},
                 'network': 'default',
                 'status': '',
-                'type': 'kubernetes',
+                'container_manager': '',
             }),
             clusters.get_cluster(SIMPLE_CLUSTER_REQUEST, bus))
 

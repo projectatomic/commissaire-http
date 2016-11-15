@@ -19,7 +19,6 @@ Networks handlers.
 from datetime import datetime as _dt
 
 from commissaire import bus as _bus
-from commissaire import constants as C
 from commissaire import models
 from commissaire_http.constants import JSONRPC_ERRORS
 from commissaire_http.handlers import LOGGER, create_response, return_error
@@ -287,7 +286,7 @@ def get_host_status(message, bus):
                 'status': host.status,
             },
             # TODO: Update when we add other types.
-            type=C.CLUSTER_TYPE_HOST)
+            type='host_only')
 
         LOGGER.debug('Status for host "{0}": "{1}"'.format(
             host.address, status.to_json()))
