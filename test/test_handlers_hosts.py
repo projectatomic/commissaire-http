@@ -36,7 +36,7 @@ HOST = Host.new(address='127.0.0.1')
 SIMPLE_HOST_REQUEST = {
     'jsonrpc': '2.0',
     'id': ID,
-    'params': HOST.to_dict(True),
+    'params': HOST.to_dict(),
 }
 CLUSTER_HOST_REQUEST = {
     'jsonrpc': '2.0',
@@ -100,7 +100,7 @@ class Test_hosts(TestCase):
         )
 
         self.assertEquals(
-            create_response(ID, HOST.to_dict()),
+            create_response(ID, HOST.to_dict_safe()),
             hosts.create_host(SIMPLE_HOST_REQUEST, bus))
 
     def test_create_host_without_an_address(self):
@@ -158,7 +158,7 @@ class Test_hosts(TestCase):
         )
 
         self.assertEquals(
-            create_response(ID, HOST.to_dict()),
+            create_response(ID, HOST.to_dict_safe()),
             hosts.create_host(CLUSTER_HOST_REQUEST, bus))
 
     def test_create_host_with_the_same_existing_host(self):
@@ -168,13 +168,13 @@ class Test_hosts(TestCase):
         bus = mock.MagicMock()
         bus.request.side_effect = (
             # Existing host
-            create_response(ID, HOST.to_dict(True)),
+            create_response(ID, HOST.to_dict()),
             # Result from save
             create_response(ID, HOST.to_dict())
         )
 
         self.assertEquals(
-            create_response(ID, HOST.to_dict()),
+            create_response(ID, HOST.to_dict_safe()),
             hosts.create_host(SIMPLE_HOST_REQUEST, bus))
 
     def test_create_host_with_existing_host_different_ssh_key(self):
@@ -291,7 +291,7 @@ class Test_hosts(TestCase):
         Verify get_hostcreds responds with the right information.
         """
         bus = mock.MagicMock()
-        bus.request.return_value = create_response(ID, HOST.to_dict(True))
+        bus.request.return_value = create_response(ID, HOST.to_dict())
         self.assertEquals(
             create_response(ID, {'ssh_priv_key': '', 'remote_user': 'root'}),
             hosts.get_hostcreds(SIMPLE_HOST_REQUEST, bus))

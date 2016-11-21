@@ -92,7 +92,8 @@ def get_container_manager(message, bus):
                 {'name': message['params']['name']}, True])
         container_manager_cfg = models.Network.new(**response['result'])
 
-        return create_response(message['id'], container_manager_cfg.to_dict())
+        return create_response(
+            message['id'], container_manager_cfg.to_dict_safe())
     except _bus.RemoteProcedureCallError as error:
         return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
 

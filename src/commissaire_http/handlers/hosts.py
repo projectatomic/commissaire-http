@@ -153,7 +153,7 @@ def create_host(message, bus):
 
         # Return out now. No more processing needed.
         return create_response(
-            message['id'], models.Host.new(**host['result']).to_dict())
+            message['id'], models.Host.new(**host['result']).to_dict_safe())
 
     except _bus.RemoteProcedureCallError as error:
         LOGGER.debug('Brand new host "{}" being created.'.format(
@@ -176,14 +176,14 @@ def create_host(message, bus):
         if address not in cluster.hostset:
             cluster.hostset.append(address)
             bus.request('storage.save', params=[
-                'Cluster', cluster.to_dict(True)])
+                'Cluster', cluster.to_dict()])
 
     try:
         host = models.Host.new(**message['params'])
         host._validate()
         bus.request(
             'storage.save', params=[
-                'Host', host.to_dict(True)])
+                'Host', host.to_dict()])
 
         # pass this off to the investigator
         bus.notify('jobs.investigate', params={'address': address})
@@ -194,7 +194,7 @@ def create_host(message, bus):
             last_check=_dt.utcnow().isoformat())
         bus.producer.publish(watcher_record.to_json(), 'jobs.watcher')
 
-        return create_response(message['id'], host.to_dict())
+        return create_response(message['id'], host.to_dict_safe())
     except models.ValidationError as error:
         return return_error(message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
 
@@ -289,9 +289,9 @@ def get_host_status(message, bus):
             type='host_only')
 
         LOGGER.debug('Status for host "{0}": "{1}"'.format(
-            host.address, status.to_json()))
+            host.address, status.to_json_safe()))
 
-        return create_response(message['id'], status.to_dict())
+        return create_response(message['id'], status.to_dict_safe())
     except _bus.RemoteProcedureCallError as error:
         LOGGER.warn('Could not retrieve host "{}". {}: {}'.format(
             message['params']['address'], type(error), error))

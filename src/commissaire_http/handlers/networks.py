@@ -91,7 +91,7 @@ def get_network(message, bus):
                 'Network', {'name': message['params']['name']}, True])
         network = models.Network.new(**network_response['result'])
 
-        return create_response(message['id'], network.to_dict())
+        return create_response(message['id'], network.to_dict_safe())
     except _bus.RemoteProcedureCallError as error:
         return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
 

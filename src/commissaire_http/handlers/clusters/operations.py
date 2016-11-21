@@ -90,7 +90,7 @@ def get_cluster_deploy(message, bus):
         cluster_deploy = models.ClusterDeploy.new(**response['result'])
         cluster_deploy._validate()
 
-        return create_response(message['id'], cluster_deploy.to_dict())
+        return create_response(message['id'], cluster_deploy.to_dict_safe())
     except models.ValidationError as error:
         LOGGER.info('Invalid data retrieved. "{}"'.format(error))
         LOGGER.debug('Data="{}"'.format(message['params']))
@@ -212,7 +212,7 @@ def get_cluster_operation(model_cls, message, bus):
         model = model_cls.new(**response['result'])
         model._validate()
 
-        return create_response(message['id'], model.to_dict())
+        return create_response(message['id'], model.to_dict_safe())
     except models.ValidationError as error:
         LOGGER.info('Invalid data retrieved. "{}"'.format(error))
         LOGGER.debug('Data="{}"'.format(message['params']))

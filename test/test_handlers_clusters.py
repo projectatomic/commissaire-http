@@ -37,7 +37,7 @@ CLUSTER = Cluster.new(name='test')
 SIMPLE_CLUSTER_REQUEST = {
     'jsonrpc': '2.0',
     'id': ID,
-    'params': CLUSTER.to_dict(True),
+    'params': CLUSTER.to_dict(),
 }
 #: Generic jsonrpc cluster request with name and network
 NETWORK_CLUSTER_REQUEST = {
@@ -214,7 +214,7 @@ class Test_clusters(TestCase):
         bus.request.return_value = {
             'jsonrpc': '2.0',
             'result': Cluster.new(
-                name='test', hostset=['127.0.0.1']).to_dict(secure=True),
+                name='test', hostset=['127.0.0.1']).to_dict(),
             'id': ID}
         self.assertEquals(
             create_response(ID, ['127.0.0.1']),
@@ -228,7 +228,7 @@ class Test_clusters(TestCase):
         cluster = Cluster.new(
             name='test', hostset=['127.0.0.1'])
 
-        bus.request.return_value = create_response(ID, cluster.to_dict(True))
+        bus.request.return_value = create_response(ID, cluster.to_dict())
 
         result = clusters.update_cluster_members({
             'jsonrpc': '2.0',
@@ -246,7 +246,7 @@ class Test_clusters(TestCase):
         cluster = Cluster.new(
             name='test', hostset=['127.0.0.1'])
 
-        bus.request.return_value = create_response(ID, cluster.to_dict(True))
+        bus.request.return_value = create_response(ID, cluster.to_dict())
 
         result = clusters.update_cluster_members({
             'jsonrpc': '2.0',
@@ -284,7 +284,7 @@ class Test_clusters(TestCase):
         cluster = Cluster.new(
             name='test', hostset=['127.0.0.1'])
 
-        bus.request.return_value = create_response(ID, cluster.to_dict(True))
+        bus.request.return_value = create_response(ID, cluster.to_dict())
 
         self.assertEquals(
             create_response(ID, ['127.0.0.1']),
@@ -298,7 +298,7 @@ class Test_clusters(TestCase):
         cluster = Cluster.new(
             name='test', hostset=['127.0.0.1'])
 
-        bus.request.return_value = create_response(ID, cluster.to_dict(True))
+        bus.request.return_value = create_response(ID, cluster.to_dict())
 
         result = clusters.check_cluster_member({
             'jsonrpc': '2.0',
@@ -318,7 +318,7 @@ class Test_clusters(TestCase):
         cluster = Cluster.new(
             name='test', hostset=[])
 
-        bus.request.return_value = create_response(ID, cluster.to_dict(True))
+        bus.request.return_value = create_response(ID, cluster.to_dict())
         expected_response = create_response(ID, ['127.0.0.1'])
         self.assertEquals(
             expected_response,
@@ -332,7 +332,7 @@ class Test_clusters(TestCase):
         cluster = Cluster.new(
             name='test', hostset=['127.0.0.1'])
 
-        bus.request.return_value = create_response(ID, cluster.to_dict(True))
+        bus.request.return_value = create_response(ID, cluster.to_dict())
         self.assertEquals(
             create_response(ID, []),
             clusters.delete_cluster_member(CHECK_CLUSTER_REQUEST, bus))
