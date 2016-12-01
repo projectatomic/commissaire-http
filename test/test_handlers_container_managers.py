@@ -36,6 +36,12 @@ SIMPLE_CONTAINER_MANAGER_CONFIG_REQUEST = {
     'id': ID,
     'params': {'name': 'test'},
 }
+#: Generic jsonrpc request with no parameters
+NO_PARAMS_REQUEST = {
+    'jsonrpc': '2.0',
+    'id': ID,
+    'params': {}
+}
 
 
 class Test_container_managers(TestCase):
@@ -48,22 +54,19 @@ class Test_container_managers(TestCase):
         Verify list_container_managers responds with the right information.
         """
         bus = mock.MagicMock()
-        bus.request.return_value = {
-            'jsonrpc': '2.0',
-            'result': [CONTAINER_MANAGER_CONFIG.to_dict()],
-            'id': ID}
+        bus.storage.list.return_value = ContainerManagerConfigs.new(
+            container_managers=[CONTAINER_MANAGER_CONFIG])
         self.assertEquals(
             create_response(ID, ['test']),
             container_managers.list_container_managers(
-                bus.request.return_value, bus))
+                NO_PARAMS_REQUEST, bus))
 
     def test_get_container_manager(self):
         """
         Verify get_container_manager responds with the right information.
         """
         bus = mock.MagicMock()
-        bus.request.return_value = create_response(
-            ID, CONTAINER_MANAGER_CONFIG.to_dict())
+        bus.storage.get.return_value = CONTAINER_MANAGER_CONFIG
         self.assertEquals(
             create_response(ID, CONTAINER_MANAGER_CONFIG.to_dict()),
             container_managers.get_container_manager(
@@ -74,7 +77,7 @@ class Test_container_managers(TestCase):
         Verify get_container_manager responds with 404 when it does not exist.
         """
         bus = mock.MagicMock()
-        bus.request.side_effect = _bus.RemoteProcedureCallError('test')
+        bus.storage.get.side_effect = _bus.RemoteProcedureCallError('test')
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['NOT_FOUND']),
             container_managers.get_container_manager(
@@ -86,11 +89,10 @@ class Test_container_managers(TestCase):
         Verify create_container_manager can create a new ContainerManagerConfig.
         """
         bus = mock.MagicMock()
-        bus.request.side_effect = (
-            # ContainerManagerConfig doesn't yet exist
-            _bus.RemoteProcedureCallError('test'),
-            # Creation response
-            create_response(ID, CONTAINER_MANAGER_CONFIG.to_dict()))
+        # ContainerManagerConfig doesn't yet exist
+        bus.storage.get.side_effect = _bus.RemoteProcedureCallError('test')
+        # Creation response
+        bus.storage.save.return_value = CONTAINER_MANAGER_CONFIG
         self.assertEquals(
             create_response(ID, CONTAINER_MANAGER_CONFIG.to_dict()),
             container_managers.create_container_manager(
@@ -101,11 +103,10 @@ class Test_container_managers(TestCase):
         Verify create_container_manager acts idempotent.
         """
         bus = mock.MagicMock()
-        bus.request.side_effect = (
-            # Network exists
-            create_response(ID, CONTAINER_MANAGER_CONFIG.to_dict()),
-            # Creation response
-            create_response(ID, CONTAINER_MANAGER_CONFIG.to_dict()))
+        # ContainerManagerConfig exists
+        bus.storage.get.return_value = CONTAINER_MANAGER_CONFIG
+        # Creation response
+        bus.storage.save.return_value = CONTAINER_MANAGER_CONFIG
         self.assertEquals(
             create_response(ID, CONTAINER_MANAGER_CONFIG.to_dict()),
             container_managers.create_container_manager(
@@ -116,13 +117,10 @@ class Test_container_managers(TestCase):
         Verify create_container_manager rejects conflicting creation.
         """
         bus = mock.MagicMock()
-        bus.request.return_value = {
-                'jsonrpc': '2.0',
-                'result': ContainerManagerConfig.new(
-                    name=CONTAINER_MANAGER_CONFIG.name,
-                    options={'test': 'test'}).to_dict(),
-                'id': ID,
-            }
+        bus.storage.get.return_value = ContainerManagerConfig.new(
+            name=CONTAINER_MANAGER_CONFIG.name,
+            options={'test': 'test'}
+        )
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['CONFLICT']),
             container_managers.create_container_manager(
@@ -133,7 +131,7 @@ class Test_container_managers(TestCase):
         Verify delete_container_manager deletes existing ContainerManagerConfig.
         """
         bus = mock.MagicMock()
-        bus.request.return_value = None
+        bus.storage.delete.return_value = None
         self.assertEquals(
             {
                 'jsonrpc': '2.0',
@@ -148,7 +146,7 @@ class Test_container_managers(TestCase):
         Verify delete_container_manager returns 404 on a missing ContainerManagerConfig.
         """
         bus = mock.MagicMock()
-        bus.request.side_effect = _bus.RemoteProcedureCallError('test')
+        bus.storage.delete.side_effect = _bus.RemoteProcedureCallError('test')
 
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['NOT_FOUND']),
@@ -162,7 +160,7 @@ class Test_container_managers(TestCase):
         # Iterate over a few errors
         for error in (Exception, KeyError, TypeError):
             bus = mock.MagicMock()
-            bus.request.side_effect = error('test')
+            bus.storage.delete.side_effect = error('test')
 
             self.assertEquals(
                 expected_error(ID, JSONRPC_ERRORS['INTERNAL_ERROR']),

@@ -25,7 +25,7 @@ from . import TestCase, expected_error
 from commissaire import bus as _bus
 from commissaire.constants import JSONRPC_ERRORS
 from commissaire_http.handlers import create_response, clusters
-from commissaire.models import Cluster, Network, ValidationError
+from commissaire.models import Cluster, Clusters, Hosts, Network, ValidationError
 
 
 # Globals reused in cluster tests
@@ -48,7 +48,7 @@ NETWORK_CLUSTER_REQUEST = {
         'network': 'test',
     },
 }
-#: Generic jsonrpc cluster memeber request with name and host
+#: Generic jsonrpc cluster member request with name and host
 CHECK_CLUSTER_REQUEST = {
     'jsonrpc': '2.0',
     'id': ID,
@@ -56,6 +56,12 @@ CHECK_CLUSTER_REQUEST = {
         'name': CLUSTER.name,
         'host': '127.0.0.1',
     },
+}
+#: Generic jsonrpc request with no parameters
+NO_PARAMS_REQUEST = {
+    'jsonrpc': '2.0',
+    'id': ID,
+    'params': {}
 }
 
 class Test_clusters(TestCase):
@@ -68,21 +74,20 @@ class Test_clusters(TestCase):
         Verify list_clusters responds with the right information.
         """
         bus = mock.MagicMock()
-        bus.request.return_value = create_response(ID, [{'name': 'test'}])
+        bus.storage.list.return_value = Clusters.new(clusters=[CLUSTER])
         self.assertEquals(
             create_response(ID, [CLUSTER.name]),
-            clusters.list_clusters(bus.request.return_value, bus))
+            clusters.list_clusters(NO_PARAMS_REQUEST, bus))
 
     def test_get_cluster(self):
         """
         Verify get_cluster responds with the right information.
         """
         bus = mock.MagicMock()
-        bus.request.side_effect = (
-            # Cluster requests
-            create_response(ID, {'name': CLUSTER.name}),
-            # Hosts requests
-            create_response(ID, []))
+        # Cluster request
+        bus.storage.get_cluster.return_value = CLUSTER
+        # Hosts requests
+        bus.storage.list.return_value = Hosts.new(hosts=[])
         self.assertEquals(
             create_response(ID, {
                 'name': 'test',
@@ -98,11 +103,11 @@ class Test_clusters(TestCase):
         Verify create_cluster saves new clusters.
         """
         bus = mock.MagicMock()
-        cluster_json = Cluster.new(name='test').to_json()
-        bus.request.return_value = create_response(ID, cluster_json)
+        bus.storage.get_cluster.side_effect = Exception
+        bus.storage.save.return_value = CLUSTER
 
         self.assertEquals(
-            create_response(ID, cluster_json),
+            create_response(ID, CLUSTER.to_dict_safe()),
             clusters.create_cluster(SIMPLE_CLUSTER_REQUEST, bus))
 
     def test_create_cluster_with_invalid_data(self):
@@ -113,7 +118,8 @@ class Test_clusters(TestCase):
         # names must be a str, not an int
         bad_cluster = Cluster.new(name=123)
 
-        bus.request.side_effect = Exception
+        bus.storage.get_cluster.side_effect = Exception
+        bus.storage.save.side_effect = ValidationError
 
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['INVALID_REQUEST']),
@@ -129,21 +135,17 @@ class Test_clusters(TestCase):
         """
         bus = mock.MagicMock()
         cluster = Cluster.new(name='test', network='test')
-        bus.request.side_effect = (
-            # The cluster doesn't exist yet
-            Exception,
-            # Network response
-            Network.new(name='test'),
-            # Creation of the cluster
-            create_response(ID, cluster.to_json()),
-        )
+        # The cluster doesn't exist yet
+        bus.storage.get_cluster.side_effect = Exception
+        # Network response
+        bus.storage.get_network.return_value = Network.new(name='test')
+        # Creation of the cluster
+        bus.storage.save.return_value = cluster
 
         # Call the handler...
         clusters.create_cluster(copy.deepcopy(NETWORK_CLUSTER_REQUEST), bus)
 
-        bus.request.assert_called_with(
-            'storage.save', params=[
-                'Cluster', cluster.to_dict()])
+        bus.storage.save.assert_called_with(mock.ANY)
 
     def test_create_cluster_with_invalid_network(self):
         """
@@ -151,33 +153,27 @@ class Test_clusters(TestCase):
         """
         bus = mock.MagicMock()
         cluster = Cluster.new(name='test', network='test')
-        bus.request.side_effect = (
-            # The cluster doesn't exist yet
-            Exception,
-            # The network doesn't exist
-            Exception,
-            # The cluster creation
-            create_response(ID, cluster.to_json()),
-        )
+        # The cluster doesn't exist yet
+        bus.storage.get_cluster.side_effect = Exception
+        # The network doesn't exist
+        bus.storage.get_network.side_effect = Exception
+        # The cluster creation
+        bus.storage.save.return_value = cluster
 
         # Call the handler...
         clusters.create_cluster(copy.deepcopy(NETWORK_CLUSTER_REQUEST), bus)
         # Update clusters network to be 'default' as we expect 'test' to be
         # rejected by the handler
         cluster.network = 'default'
-        bus.request.assert_called_with(
-            'storage.save', params=[
-                'Cluster', cluster.to_dict()])
+        bus.storage.save.assert_called_with(mock.ANY)
 
     def test_delete_cluster(self):
         """
         Verify delete_cluster deletes existing clusters.
         """
         bus = mock.MagicMock()
-        bus.request.side_effect = (
-            # The delete shouldn't return anything
-            None,
-        )
+        # The delete shouldn't return anything
+        bus.storage.delete.return_value = None
         self.assertEquals(
             create_response(ID, []),
             clusters.delete_cluster(SIMPLE_CLUSTER_REQUEST, bus))
@@ -187,9 +183,7 @@ class Test_clusters(TestCase):
         Verify delete_cluster returns properly when the cluster doesn't exist.
         """
         bus = mock.MagicMock()
-        bus.request.side_effect = (
-            _bus.RemoteProcedureCallError('test')
-        )
+        bus.storage.delete.side_effect = _bus.RemoteProcedureCallError('test')
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['NOT_FOUND']),
             clusters.delete_cluster(SIMPLE_CLUSTER_REQUEST, bus))
@@ -199,9 +193,7 @@ class Test_clusters(TestCase):
         Verify delete_cluster returns properly when an unexpected error occurs.
         """
         bus = mock.MagicMock()
-        bus.request.side_effect = (
-            Exception('test')
-        )
+        bus.storage.delete.side_effect = Exception('test')
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['INTERNAL_ERROR']),
             clusters.delete_cluster(SIMPLE_CLUSTER_REQUEST, bus))
@@ -211,11 +203,8 @@ class Test_clusters(TestCase):
         Verify that list_cluster_members returns proper information.
         """
         bus = mock.MagicMock()
-        bus.request.return_value = {
-            'jsonrpc': '2.0',
-            'result': Cluster.new(
-                name='test', hostset=['127.0.0.1']).to_dict(),
-            'id': ID}
+        bus.storage.get_cluster.return_value = Cluster.new(
+            name='test', hostset=['127.0.0.1'])
         self.assertEquals(
             create_response(ID, ['127.0.0.1']),
             clusters.list_cluster_members(SIMPLE_CLUSTER_REQUEST, bus))
@@ -228,7 +217,8 @@ class Test_clusters(TestCase):
         cluster = Cluster.new(
             name='test', hostset=['127.0.0.1'])
 
-        bus.request.return_value = create_response(ID, cluster.to_dict())
+        bus.storage.get_cluster.return_value = cluster
+        bus.storage.save.return_value = cluster
 
         result = clusters.update_cluster_members({
             'jsonrpc': '2.0',
@@ -246,7 +236,7 @@ class Test_clusters(TestCase):
         cluster = Cluster.new(
             name='test', hostset=['127.0.0.1'])
 
-        bus.request.return_value = create_response(ID, cluster.to_dict())
+        bus.storage.get_cluster.return_value = cluster
 
         result = clusters.update_cluster_members({
             'jsonrpc': '2.0',
@@ -284,7 +274,7 @@ class Test_clusters(TestCase):
         cluster = Cluster.new(
             name='test', hostset=['127.0.0.1'])
 
-        bus.request.return_value = create_response(ID, cluster.to_dict())
+        bus.storage.get_cluster.return_value = cluster
 
         self.assertEquals(
             create_response(ID, ['127.0.0.1']),
@@ -298,7 +288,7 @@ class Test_clusters(TestCase):
         cluster = Cluster.new(
             name='test', hostset=['127.0.0.1'])
 
-        bus.request.return_value = create_response(ID, cluster.to_dict())
+        bus.storage.get_cluster.return_value = cluster
 
         result = clusters.check_cluster_member({
             'jsonrpc': '2.0',
@@ -318,7 +308,9 @@ class Test_clusters(TestCase):
         cluster = Cluster.new(
             name='test', hostset=[])
 
-        bus.request.return_value = create_response(ID, cluster.to_dict())
+        bus.storage.get_cluster.return_value = cluster
+        bus.storage.save.return_value = None
+
         expected_response = create_response(ID, ['127.0.0.1'])
         self.assertEquals(
             expected_response,
@@ -332,7 +324,9 @@ class Test_clusters(TestCase):
         cluster = Cluster.new(
             name='test', hostset=['127.0.0.1'])
 
-        bus.request.return_value = create_response(ID, cluster.to_dict())
+        bus.storage.get_cluster.return_value = cluster
+        bus.storage.save.return_value = None
+
         self.assertEquals(
             create_response(ID, []),
             clusters.delete_cluster_member(CHECK_CLUSTER_REQUEST, bus))

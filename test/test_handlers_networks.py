@@ -22,8 +22,8 @@ from . import TestCase, expected_error
 
 from commissaire import bus as _bus
 from commissaire.constants import JSONRPC_ERRORS
-from commissaire_http.handlers import networks, create_response, clusters
-from commissaire.models import Network, ValidationError
+from commissaire_http.handlers import networks, create_response
+from commissaire.models import Network, Networks, ValidationError
 
 # Globals reused in network tests
 #: Message ID
@@ -35,6 +35,12 @@ SIMPLE_NETWORK_REQUEST = {
     'jsonrpc': '2.0',
     'id': ID,
     'params': {'name': 'test'},
+}
+#: Generic jsonrpc request with no parameters
+NO_PARAMS_REQUEST = {
+    'jsonrpc': '2.0',
+    'id': ID,
+    'params': {}
 }
 
 
@@ -48,20 +54,17 @@ class Test_networks(TestCase):
         Verify list_networks responds with the right information.
         """
         bus = mock.MagicMock()
-        bus.request.return_value = {
-            'jsonrpc': '2.0',
-            'result': [NETWORK.to_dict()],
-            'id': '123'}
+        bus.storage.list.return_value = Networks.new(networks=[NETWORK])
         self.assertEquals(
             create_response(ID, ['test']),
-            clusters.list_clusters(bus.request.return_value, bus))
+            networks.list_networks(NO_PARAMS_REQUEST, bus))
 
     def test_get_network(self):
         """
         Verify get_network responds with the right information.
         """
         bus = mock.MagicMock()
-        bus.request.return_value = create_response(ID, NETWORK.to_dict())
+        bus.storage.get_network.return_value = NETWORK
         self.assertEquals(
             create_response(ID, NETWORK.to_dict()),
             networks.get_network(SIMPLE_NETWORK_REQUEST, bus))
@@ -71,11 +74,10 @@ class Test_networks(TestCase):
         Verify create_network can create a new network.
         """
         bus = mock.MagicMock()
-        bus.request.side_effect = (
-            # Network doesn't yet exist
-            _bus.RemoteProcedureCallError('test'),
-            # Creation response
-            create_response(ID, NETWORK.to_dict()))
+        # Network doesn't yet exist
+        bus.storage.get.side_effect = _bus.RemoteProcedureCallError('test')
+        # Creation response
+        bus.storage.save.return_value = NETWORK
         self.assertEquals(
             create_response(ID, NETWORK.to_dict()),
             networks.create_network(SIMPLE_NETWORK_REQUEST, bus))
@@ -85,11 +87,10 @@ class Test_networks(TestCase):
         Verify create_network acts idempotent.
         """
         bus = mock.MagicMock()
-        bus.request.side_effect = (
-            # Network exists
-            create_response(ID, NETWORK.to_dict()),
-            # Creation response
-            create_response(ID, NETWORK.to_dict()))
+        # Network exists
+        bus.storage.get.return_value = NETWORK
+        # Creation response
+        bus.storage.save.return_value = NETWORK
         self.assertEquals(
             create_response(ID, NETWORK.to_dict()),
             networks.create_network(SIMPLE_NETWORK_REQUEST, bus))
@@ -99,12 +100,8 @@ class Test_networks(TestCase):
         Verify create_network rejects conflicting network creation.
         """
         bus = mock.MagicMock()
-        bus.request.return_value = {
-                'jsonrpc': '2.0',
-                'result': Network.new(
-                    name=NETWORK.name, options={'test': 'test'}).to_dict(),
-                'id': '123',
-            }
+        bus.storage.get_network.return_value = Network.new(
+            name=NETWORK.name, options={'test': 'test'})
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['CONFLICT']),
             networks.create_network(SIMPLE_NETWORK_REQUEST, bus))
@@ -114,7 +111,7 @@ class Test_networks(TestCase):
         Verify delete_network deletes existing networks.
         """
         bus = mock.MagicMock()
-        bus.request.return_value = None
+        bus.storage.delete.return_value = None
         self.assertEquals(
             {
                 'jsonrpc': '2.0',
@@ -128,7 +125,7 @@ class Test_networks(TestCase):
         Verify delete_network returns 404 on a missing network.
         """
         bus = mock.MagicMock()
-        bus.request.side_effect = _bus.RemoteProcedureCallError('test')
+        bus.storage.delete.side_effect = _bus.RemoteProcedureCallError('test')
 
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['NOT_FOUND']),
@@ -141,7 +138,7 @@ class Test_networks(TestCase):
         # Iterate over a few errors
         for error in (Exception, KeyError, TypeError):
             bus = mock.MagicMock()
-            bus.request.side_effect = error('test')
+            bus.storage.delete.side_effect = error('test')
 
             self.assertEquals(
                 expected_error(ID, JSONRPC_ERRORS['INTERNAL_ERROR']),

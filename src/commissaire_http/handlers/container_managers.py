@@ -68,10 +68,9 @@ def list_container_managers(message, bus):
     :returns: A jsonrpc structure.
     :rtype: dict
     """
-    msg = bus.request(
-        'storage.list', params=['ContainerManagerConfigs'])
+    container = bus.storage.list(models.ContainerManagerConfigs)
     return create_response(
-        message['id'], [cmc['name'] for cmc in msg['result']])
+        message['id'], [cmc.name for cmc in container.container_managers])
 
 
 def get_container_manager(message, bus):
@@ -86,11 +85,9 @@ def get_container_manager(message, bus):
     :rtype: dict
     """
     try:
-        response = bus.request(
-            'storage.get', params=[
-                'ContainerManagerConfig',
-                {'name': message['params']['name']}, True])
-        container_manager_cfg = models.Network.new(**response['result'])
+        name = message['params']['name']
+        container_manager_cfg = bus.storage.get(
+            models.ContainerManagerConfig.new(name=name))
 
         return create_response(
             message['id'], container_manager_cfg.to_dict_safe())
@@ -110,20 +107,19 @@ def create_container_manager(message, bus):
     :rtype: dict
     """
     try:
+        name = message['params']['name']
         LOGGER.debug('create_container_manager params: {}'.format(
             message['params']))
         # Check to see if we already have a network with that name
-        cmc = bus.request('storage.get', params=[
-            'ContainerManagerConfig', {'name': message['params']['name']}])
+        input_cmc = models.ContainerManagerConfig.new(**message['params'])
+        saved_cmc = bus.storage.get(input_cmc)
         LOGGER.debug(
             'Creation of already exisiting ContainerManagerConfig '
-            '"{}" requested.'.format(message['params']['name']))
+            '"{}" requested.'.format(name))
 
         # If they are the same thing then go ahead and return success
-        if models.ContainerManagerConfig.new(
-            **cmc['result']).to_dict() == models.ContainerManagerConfig.new(
-                **message['params']).to_dict():
-            return create_response(message['id'], cmc['result'])
+        if saved_cmc.to_dict() == input_cmc.to_dict():
+            return create_response(message['id'], saved_cmc.to_dict_safe())
 
         # Otherwise error with a CONFLICT
         return return_error(
@@ -131,20 +127,15 @@ def create_container_manager(message, bus):
             'A ContainerManager with that name already exists.',
             JSONRPC_ERRORS['CONFLICT'])
     except _bus.RemoteProcedureCallError as error:
-        LOGGER.debug('Error getting ContainerManagerConfig: {}: {}'.format(
-            type(error), error))
         LOGGER.info(
             'Attempting to create new ContainerManagerConfig: "{}"'.format(
                 message['params']))
 
     # Create the new ContainerManagerConfig
     try:
-        cmc = models.ContainerManagerConfig.new(**message['params'])
-        cmc._validate()
-        response = bus.request(
-            'storage.save', params=[
-                'ContainerManagerConfig', cmc.to_dict()])
-        return create_response(message['id'], response['result'])
+        input_cmc = models.ContainerManagerConfig.new(**message['params'])
+        saved_cmc = bus.storage.save(input_cmc)
+        return create_response(message['id'], saved_cmc.to_dict_safe())
     except models.ValidationError as error:
         return return_error(message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
 
@@ -161,14 +152,12 @@ def delete_container_manager(message, bus):
     :rtype: dict
     """
     try:
+        name = message['params']['name']
         LOGGER.debug('Attempting to delete ContainerManagerConfig "{}"'.format(
-            message['params']['name']))
-        bus.request('storage.delete', params=[
-            'ContainerManagerConfig', {'name': message['params']['name']}])
+            name))
+        bus.storage.delete(models.ContainerManagerConfig.new(name=name))
         return create_response(message['id'], [])
     except _bus.RemoteProcedureCallError as error:
-        LOGGER.debug('Error deleting ContainerManagerConfig: {}: {}'.format(
-            type(error), error))
         return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
     except Exception as error:
         LOGGER.debug('Error deleting ContainerManagerConfig: {}: {}'.format(

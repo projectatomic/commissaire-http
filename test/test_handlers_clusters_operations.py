@@ -59,8 +59,8 @@ class Test_deploy_operations(TestCase):
         Verify get_cluster_deploy responds with the right information.
         """
         bus = mock.MagicMock()
-        bus.request.return_value = create_response(
-            ID, CLUSTER_DEPLOY.to_dict())
+        bus.storage.get.return_value = CLUSTER_DEPLOY
+
         self.assertEquals(
             create_response(ID, CLUSTER_DEPLOY.to_dict()),
             operations.get_cluster_deploy(SIMPLE_DEPLOY_REQUEST, bus))
@@ -70,7 +70,7 @@ class Test_deploy_operations(TestCase):
         Verify get_cluster_deploy responds with a 404 error on missing cluster.
         """
         bus = mock.MagicMock()
-        bus.request.side_effect = _bus.RemoteProcedureCallError('test')
+        bus.storage.get.side_effect = _bus.RemoteProcedureCallError('test')
 
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['NOT_FOUND']),
@@ -81,8 +81,7 @@ class Test_deploy_operations(TestCase):
         Verify get_cluster_deploy responds with an error when invalid data is given.
         """
         bus = mock.MagicMock()
-        bus.request.return_value = create_response(
-            ID, BAD_CLUSTER_DEPLOY.to_dict())
+        bus.storage.get.return_value = BAD_CLUSTER_DEPLOY
 
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['INVALID_PARAMETERS']),
@@ -165,8 +164,7 @@ class Test_get_cluster_operation(TestCase):
                 (CLUSTER_UPGRADE, SIMPLE_UPGRADE_REQUEST),
                 (CLUSTER_RESTART, SIMPLE_RESTART_REQUEST)]:
             bus = mock.MagicMock()
-            bus.request.return_value = create_response(
-                ID, model_instance.to_dict())
+            bus.storage.get.return_value = model_instance
             self.assertEquals(
                 create_response(ID, model_instance.to_dict()),
                 operations.get_cluster_operation(
@@ -181,7 +179,7 @@ class Test_get_cluster_operation(TestCase):
                 (CLUSTER_RESTART, SIMPLE_RESTART_REQUEST)]:
 
             bus = mock.MagicMock()
-            bus.request.side_effect = _bus.RemoteProcedureCallError('test')
+            bus.storage.get.side_effect = _bus.RemoteProcedureCallError('test')
 
             self.assertEquals(
                 expected_error(ID, JSONRPC_ERRORS['NOT_FOUND']),
@@ -192,14 +190,16 @@ class Test_get_cluster_operation(TestCase):
         """
         Verify get_cluster_operation responds with an error when invalid data is given.
         """
-        for model_instance in (CLUSTER_UPGRADE, CLUSTER_RESTART):
+        for model_class in (ClusterUpgrade, ClusterRestart):
             bus = mock.MagicMock()
-            bus.request.return_value = create_response(ID, {})
+            bad_model_instance = model_class.new(name='test')
+            bad_model_instance.name = None
+            bus.storage.get.return_value = bad_model_instance
 
             self.assertEquals(
                 expected_error(ID, JSONRPC_ERRORS['INVALID_PARAMETERS']),
                 operations.get_cluster_operation(
-                    model_instance.__class__, BAD_CLUSTER_OPERATION, bus))
+                    model_class, BAD_CLUSTER_OPERATION, bus))
 
     def test_create_cluster_operation(self):
         """
@@ -257,11 +257,10 @@ class Test_get_cluster_operation(TestCase):
                 (CLUSTER_UPGRADE, SIMPLE_UPGRADE_REQUEST),
                 (CLUSTER_RESTART, SIMPLE_RESTART_REQUEST)]:
             bus = mock.MagicMock()
-            bus.request.side_effect = (
-                # The cluster exists call
-                None,
-                # The attempt to save
-                _bus.RemoteProcedureCallError('test'))
+            # The cluster exists call
+            bus.storage.get_cluster.return_value = None
+            # The attempt to save
+            bus.request.side_effect = _bus.RemoteProcedureCallError('test')
 
             self.assertEquals(
                 expected_error(ID, JSONRPC_ERRORS['INTERNAL_ERROR']),

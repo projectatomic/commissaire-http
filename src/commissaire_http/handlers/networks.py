@@ -68,10 +68,10 @@ def list_networks(message, bus):
     :returns: A jsonrpc structure.
     :rtype: dict
     """
-    networks_msg = bus.request('storage.list', params=['Networks'])
+    container = bus.storage.list(models.Networks)
     return create_response(
         message['id'],
-        [network['name'] for network in networks_msg['result']])
+        [network.name for network in container.networks])
 
 
 def get_network(message, bus):
@@ -86,11 +86,8 @@ def get_network(message, bus):
     :rtype: dict
     """
     try:
-        network_response = bus.request(
-            'storage.get', params=[
-                'Network', {'name': message['params']['name']}, True])
-        network = models.Network.new(**network_response['result'])
-
+        name = message['params']['name']
+        network = bus.storage.get_network(name)
         return create_response(message['id'], network.to_dict_safe())
     except _bus.RemoteProcedureCallError as error:
         return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
@@ -108,19 +105,18 @@ def create_network(message, bus):
     :rtype: dict
     """
     try:
+        name = message['params']['name']
         LOGGER.debug('create_network params: {}'.format(message['params']))
         # Check to see if we already have a network with that name
-        network = bus.request('storage.get', params=[
-            'Network', {'name': message['params']['name']}])
+        input_network = models.Network.new(**message['params'])
+        saved_network = bus.storage.get(input_network)
         LOGGER.debug(
             'Creation of already exisiting network "{0}" requested.'.format(
-                message['params']['name']))
+                name))
 
         # If they are the same thing then go ahead and return success
-        if models.Network.new(
-            **network['result']).to_dict() == models.Network.new(
-                **message['params']).to_dict():
-            return create_response(message['id'], network['result'])
+        if saved_network.to_dict() == input_network.to_dict():
+            return create_response(message['id'], saved_network.to_dict_safe())
 
         # Otherwise error with a CONFLICT
         return return_error(
@@ -128,19 +124,14 @@ def create_network(message, bus):
             'A network with that name already exists.',
             JSONRPC_ERRORS['CONFLICT'])
     except _bus.RemoteProcedureCallError as error:
-        LOGGER.debug('Error getting network: {}: {}'.format(
-            type(error), error))
         LOGGER.info('Attempting to create new network: "{}"'.format(
             message['params']))
 
     # Create the new network
     try:
-        network = models.Network.new(**message['params'])
-        network._validate()
-        response = bus.request(
-            'storage.save', params=[
-                'Network', network.to_dict()])
-        return create_response(message['id'], response['result'])
+        input_network = models.Network.new(**message['params'])
+        saved_network = bus.storage.save(input_network)
+        return create_response(message['id'], saved_network.to_dict_safe())
     except models.ValidationError as error:
         return return_error(message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
 
@@ -157,14 +148,11 @@ def delete_network(message, bus):
     :rtype: dict
     """
     try:
-        LOGGER.debug('Attempting to delete network "{}"'.format(
-            message['params']['name']))
-        bus.request('storage.delete', params=[
-            'Network', {'name': message['params']['name']}])
+        name = message['params']['name']
+        LOGGER.debug('Attempting to delete network "{}"'.format(name))
+        bus.storage.delete(models.Network.new(name=name))
         return create_response(message['id'], [])
     except _bus.RemoteProcedureCallError as error:
-        LOGGER.debug('Error deleting network: {}: {}'.format(
-            type(error), error))
         return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
     except Exception as error:
         LOGGER.debug('Error deleting network: {}: {}'.format(

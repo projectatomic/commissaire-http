@@ -25,7 +25,8 @@ from commissaire import bus as _bus
 from commissaire import constants as C
 from commissaire.constants import JSONRPC_ERRORS
 from commissaire_http.handlers import hosts, create_response, clusters
-from commissaire.models import Host, HostStatus, ValidationError
+from commissaire.models import (
+    Host, Hosts, HostStatus, Cluster, Clusters, ValidationError)
 
 # Globals reused in host tests
 #: Message ID
@@ -46,6 +47,12 @@ CLUSTER_HOST_REQUEST = {
         'cluster': 'mycluster',
     },
 }
+#: Generic jsonrpc request with no parameters
+NO_PARAMS_REQUEST = {
+    'jsonrpc': '2.0',
+    'id': ID,
+    'params': {}
+}
 
 
 class Test_hosts(TestCase):
@@ -58,22 +65,19 @@ class Test_hosts(TestCase):
         Verify list_hosts responds with the right information.
         """
         bus = mock.MagicMock()
-        bus.request.return_value = {
-            'jsonrpc': '2.0',
-            'result': [HOST.to_dict()],
-            'id': '123'}
+        bus.storage.list.return_value = Hosts.new(hosts=[HOST])
         self.assertEquals(
-            create_response(ID, [HOST.to_dict()]),
-            hosts.list_hosts(SIMPLE_HOST_REQUEST, bus))
+            create_response(ID, [HOST.to_dict_safe()]),
+            hosts.list_hosts(NO_PARAMS_REQUEST, bus))
 
     def test_get_host(self):
         """
         Verify get_host responds with the right information.
         """
         bus = mock.MagicMock()
-        bus.request.return_value = create_response(ID, HOST.to_dict())
+        bus.storage.get_host.return_value = HOST
         self.assertEquals(
-            create_response(ID, HOST.to_dict()),
+            create_response(ID, HOST.to_dict_safe()),
             hosts.get_host(SIMPLE_HOST_REQUEST, bus))
 
     def test_get_host_that_doesnt_exist(self):
@@ -81,7 +85,7 @@ class Test_hosts(TestCase):
         Verify get_host responds with a 404 error on missing hosts.
         """
         bus = mock.MagicMock()
-        bus.request.side_effect = _bus.RemoteProcedureCallError('test')
+        bus.storage.get_host.side_effect = _bus.RemoteProcedureCallError('test')
 
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['NOT_FOUND']),
@@ -92,12 +96,10 @@ class Test_hosts(TestCase):
         Verify create_host saves new hosts.
         """
         bus = mock.MagicMock()
-        bus.request.side_effect = (
-            # Host doesn't exist yet
-            _bus.RemoteProcedureCallError('test'),
-            # Result from save
-            create_response(ID, HOST.to_dict())
-        )
+        # Host doesn't exist yet
+        bus.storage.get_host.side_effect = _bus.RemoteProcedureCallError('test')
+        # Result from save
+        bus.storage.save.return_value = HOST
 
         self.assertEquals(
             create_response(ID, HOST.to_dict_safe()),
@@ -108,12 +110,10 @@ class Test_hosts(TestCase):
         Verify create_host returns INVALID_PARAMETERS when no address is given.
         """
         bus = mock.MagicMock()
-        bus.request.side_effect = (
-            # Host doesn't exist yet
-            _bus.RemoteProcedureCallError('test'),
-            # Result from save
-            create_response(ID, HOST.to_json())
-        )
+        # Host doesn't exist yet
+        bus.storage.get.side_effect = _bus.RemoteProcedureCallError('test')
+        # Result from save
+        bus.storage.save.return_value = HOST
 
         addressless = copy.deepcopy(SIMPLE_HOST_REQUEST)
         addressless['params'] = {}
@@ -128,8 +128,7 @@ class Test_hosts(TestCase):
         Verify create_host returns INVALID_PARAMETERS when the cluster does not exist.
         """
         bus = mock.MagicMock()
-
-        bus.request.side_effect = (
+        bus.storage.get.side_effect = (
             # Host doesn't exist yet
             _bus.RemoteProcedureCallError('test'),
             # Request the cluster which does not exist
@@ -146,15 +145,15 @@ class Test_hosts(TestCase):
         """
         bus = mock.MagicMock()
 
-        bus.request.side_effect = (
-            # Host doesn't exist yet
-            _bus.RemoteProcedureCallError('test'),
-            # Request the cluster
-            create_response(ID, {'hostset': []}),
-            # Save of the cluster
-            create_response(ID, {'hostset': []}),
-            # Result from save (ignored)
-            create_response(ID, HOST.to_dict())
+        # Host doesn't exist yet
+        bus.storage.get_host.side_effect = _bus.RemoteProcedureCallError('test')
+        # Request the cluster
+        bus.storage.get_cluster.return_value = Cluster.new(name='mycluster')
+        bus.storage.save.side_effect = (
+            # Cluster save (ignored)
+            None,
+            # Result from save
+            HOST
         )
 
         self.assertEquals(
@@ -166,12 +165,10 @@ class Test_hosts(TestCase):
         Verify create_host succeeds when a new host matches an existing one.
         """
         bus = mock.MagicMock()
-        bus.request.side_effect = (
-            # Existing host
-            create_response(ID, HOST.to_dict()),
-            # Result from save
-            create_response(ID, HOST.to_dict())
-        )
+        # Existing host
+        bus.storage.get_host.return_value = HOST
+        # Result from save
+        bus.storage.save.return_value = HOST
 
         self.assertEquals(
             create_response(ID, HOST.to_dict_safe()),
@@ -182,10 +179,10 @@ class Test_hosts(TestCase):
         Verify create_host returns conflict existing hosts ssh keys do not match.
         """
         bus = mock.MagicMock()
-        different = HOST.to_dict()
-        different['ssh_priv_key'] = 'aaa'
+        different = Host.new(**HOST.to_dict())
+        different.ssh_priv_key = 'aaa'
 
-        bus.request.return_value = create_response(ID, different)
+        bus.storage.save.return_value = different
 
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['CONFLICT']),
@@ -199,13 +196,10 @@ class Test_hosts(TestCase):
         different = HOST.to_dict()
         different['ssh_priv_key'] = ''
 
-        bus.request.side_effect = (
-            # Existing host
-            create_response(ID, different),
-            # Cluster
-            create_response(ID, {'hostset': []}),
-            create_response(ID, {'hostset': []})
-        )
+        # Existing host
+        bus.storage.get_host.return_value = Host.new(**different)
+        # Cluster
+        bus.storage.get_cluster.return_value = Cluster.new(name='test')
 
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['CONFLICT']),
@@ -216,12 +210,10 @@ class Test_hosts(TestCase):
         Verify delete_host deletes existing hosts.
         """
         bus = mock.MagicMock()
-        bus.request.side_effect = (
-            # The delete shouldn't return anything
-            None,
-            # The clusters list
-            {'result': [{'hostset': []}]},
-        )
+        # The delete shouldn't return anything
+        bus.storage.delete.return_value = None
+        bus.storage.list.return_value = Clusters.new(
+            clusters=[Cluster.new(name='test')])
         self.assertEquals(
             {
                 'jsonrpc': '2.0',
@@ -235,14 +227,13 @@ class Test_hosts(TestCase):
         Verify delete_host deletes existing host and removes it from it's cluster.
         """
         bus = mock.MagicMock()
-        bus.request.side_effect = (
-            # The delete shouldn't return anything
-            None,
-            # The clusters list
-            {'result': [{'name': 'mycluster', 'hostset': [HOST.address]}]},
-            # The cluster response on save (which is ignored)
-            {'result': []}
-        )
+        # The delete shouldn't return anything
+        bus.storage.delete.return_value = None
+        # The cluster response on save (which is ignored)
+        bus.storage.save.return_value = None
+        # The clusters list
+        bus.storage.list.return_value = Clusters.new(
+            clusters=[Cluster.new(name='mycluster', hostset=[HOST.address])])
         self.assertEquals(
             {
                 'jsonrpc': '2.0',
@@ -252,22 +243,18 @@ class Test_hosts(TestCase):
             hosts.delete_host(SIMPLE_HOST_REQUEST, bus))
 
         # Verify we had a host delete_host
-        bus.request.assert_has_calls((
-            # Verify we had an initial delete
-            mock.call('storage.delete', params=[
-                'Host', {'address': HOST.address}]),
-            # Verify we had a list of clusters
-            mock.call('storage.list', params=['Clusters', True]),
-            # Verify we had a cluster save
-            mock.call('storage.save', params=['Cluster', mock.ANY])
-        ))
+        bus.storage.delete.assert_called_with(mock.ANY)
+        # Verify we had a list of clusters
+        bus.storage.list.assert_called_with(Clusters)
+        # Verify we had a cluster save
+        bus.storage.save.assert_called_with(mock.ANY)
 
     def test_delete_host_not_found_on_missing_key(self):
         """
         Verify delete_host returns 404 on a missing host.
         """
         bus = mock.MagicMock()
-        bus.request.side_effect = _bus.RemoteProcedureCallError('test')
+        bus.storage.delete.side_effect = _bus.RemoteProcedureCallError('test')
 
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['NOT_FOUND']),
@@ -280,7 +267,7 @@ class Test_hosts(TestCase):
         # Iterate over a few errors
         for error in (Exception, KeyError, TypeError):
             bus = mock.MagicMock()
-            bus.request.side_effect = error('test')
+            bus.storage.delete.side_effect = error('test')
 
             self.assertEquals(
                 expected_error(ID, JSONRPC_ERRORS['INTERNAL_ERROR']),
@@ -291,7 +278,7 @@ class Test_hosts(TestCase):
         Verify get_hostcreds responds with the right information.
         """
         bus = mock.MagicMock()
-        bus.request.return_value = create_response(ID, HOST.to_dict())
+        bus.storage.get_host.return_value = HOST
         self.assertEquals(
             create_response(ID, {'ssh_priv_key': '', 'remote_user': 'root'}),
             hosts.get_hostcreds(SIMPLE_HOST_REQUEST, bus))
@@ -301,7 +288,7 @@ class Test_hosts(TestCase):
         Verify get_hostcreds responds with a 404 error on missing hosts.
         """
         bus = mock.MagicMock()
-        bus.request.side_effect = _bus.RemoteProcedureCallError('test')
+        bus.storage.get_host.side_effect = _bus.RemoteProcedureCallError('test')
 
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['NOT_FOUND']),
@@ -312,7 +299,7 @@ class Test_hosts(TestCase):
         Verify get_host_status responds with status information.
         """
         bus = mock.MagicMock()
-        bus.request.return_value = create_response(ID, HOST.to_dict())
+        bus.storage.get_host.return_value = HOST
         host_status = HostStatus.new(
             host={'last_check': '', 'status': ''}, type='host_only')
         self.assertEquals(
@@ -324,7 +311,7 @@ class Test_hosts(TestCase):
         Verify get_host_status responds with a 404 error on missing hosts.
         """
         bus = mock.MagicMock()
-        bus.request.side_effect = _bus.RemoteProcedureCallError('test')
+        bus.storage.get_host.side_effect = _bus.RemoteProcedureCallError('test')
 
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['NOT_FOUND']),

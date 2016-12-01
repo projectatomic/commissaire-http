@@ -21,6 +21,7 @@ import logging
 from kombu import Connection, Exchange, Producer, Queue
 
 from commissaire.bus import BusMixin
+from commissaire.storage.client import StorageClient
 
 
 class Bus(BusMixin):
@@ -47,6 +48,7 @@ class Bus(BusMixin):
         self.exchange_name = exchange_name
         self.connection_url = connection_url
         self.qkwargs = qkwargs
+        self.storage = StorageClient(self)
 
     @property
     def init_kwargs(self):

@@ -84,10 +84,8 @@ def get_cluster_deploy(message, bus):
     :rtype: dict
     """
     try:
-        response = bus.request(
-            'storage.get', params=[
-                'ClusterDeploy', {'name': message['params']['name']}, True])
-        cluster_deploy = models.ClusterDeploy.new(**response['result'])
+        name = message['params']['name']
+        cluster_deploy = bus.storage.get(models.ClusterDeploy.new(name=name))
         cluster_deploy._validate()
 
         return create_response(message['id'], cluster_deploy.to_dict_safe())
@@ -96,8 +94,6 @@ def get_cluster_deploy(message, bus):
         LOGGER.debug('Data="{}"'.format(message['params']))
         return return_error(message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
     except _bus.RemoteProcedureCallError as error:
-        LOGGER.debug('Error getting ClusterDeploy: {}: {}'.format(
-            type(error), error))
         return return_error(message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
 
 
@@ -205,11 +201,8 @@ def get_cluster_operation(model_cls, message, bus):
     :rtype: dict
     """
     try:
-        response = bus.request(
-            'storage.get', params=[
-                model_cls.__name__,
-                {'name': message['params']['name']}, True])
-        model = model_cls.new(**response['result'])
+        name = message['params']['name']
+        model = bus.storage.get(model_cls.new(name=name))
         model._validate()
 
         return create_response(message['id'], model.to_dict_safe())
@@ -242,9 +235,7 @@ def create_cluster_operation(model_cls, message, bus, routing_key):
     # Verify cluster exists first
     cluster_name = message['params']['name']
     try:
-        bus.request(
-            'storage.get', params=[
-                'Cluster', {'name': cluster_name}, True])
+        bus.storage.get_cluster(cluster_name)
         LOGGER.debug('Found cluster "{}"'.format(cluster_name))
     except:
         error_msg = 'Cluster "{}" does not exist.'.format(cluster_name)

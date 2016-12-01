@@ -98,10 +98,10 @@ def list_clusters(message, bus):
     :returns: A jsonrpc structure.
     :rtype: dict
     """
-    clusters_msg = bus.request('storage.list', params=['Clusters'])
+    container = bus.storage.list(models.Clusters)
     return create_response(
         message['id'],
-        [cluster['name'] for cluster in clusters_msg['result']])
+        [cluster.name for cluster in container.clusters])
 
 
 def get_cluster(message, bus):
@@ -115,18 +115,16 @@ def get_cluster(message, bus):
     :returns: A jsonrpc structure.
     :rtype: dict
     """
-    cluster_response = bus.request(
-        'storage.get', params=[
-            'Cluster', {'name': message['params']['name']}, True])
-    cluster = models.Cluster.new(**cluster_response['result'])
-    hosts_response = bus.request('storage.list', params=['Hosts'])
+    name = message['params']['name']
+    cluster = bus.storage.get_cluster(name)
+    container = bus.storage.list(models.Hosts)
 
     available = unavailable = total = 0
 
-    for host in hosts_response['result']:
-        if host['address'] in cluster.hostset:
+    for host in container.hosts:
+        if host.address in cluster.hostset:
             total += 1
-            if host['status'] == 'active':
+            if host.status == 'active':
                 available += 1
             else:
                 unavailable += 1
@@ -150,31 +148,26 @@ def create_cluster(message, bus):
     :rtype: dict
     """
     try:
-        bus.request('storage.get', params=[
-            'Cluster', {'name': message['params']['name']}])
+        name = message['params']['name']
+        bus.storage.get_cluster(name)
         LOGGER.debug(
             'Creation of already exisiting cluster {0} requested.'.format(
-                message['params']['name']))
+                name))
     except Exception as error:
         LOGGER.debug('Brand new cluster being created.')
 
-        if message['params'].get('network'):
+        network_name = message['params'].get('network')
+        if network_name:
             # Verify the networks existence
             try:
-                bus.request('storage.get', params=[
-                    'Network', {'name': message['params']['network']}
-                ])
+                bus.storage.get_network(network_name)
             except Exception as error:
                 # Default if the network doesn't exist
                 message['params']['network'] = C.DEFAULT_CLUSTER_NETWORK_JSON['name']  # noqa
 
     try:
-        cluster = models.Cluster.new(**message['params'])
-        cluster._validate()
-        response = bus.request(
-            'storage.save', params=[
-                'Cluster', cluster.to_dict()])
-        return create_response(message['id'], response['result'])
+        cluster = bus.storage.save(models.Cluster.new(**message['params']))
+        return create_response(message['id'], cluster.to_dict_safe())
     except models.ValidationError as error:
         return return_error(message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
 
@@ -193,12 +186,9 @@ def delete_cluster(message, bus):
     try:
         name = message['params']['name']
         LOGGER.debug('Attempting to delete cluster "{}"'.format(name))
-        bus.request('storage.delete', params=[
-            'Cluster', {'name': name}])
+        bus.storage.delete(models.Cluster.new(name=name))
         return create_response(message['id'], [])
     except _bus.RemoteProcedureCallError as error:
-        LOGGER.debug('Error deleting cluster: {}: {}'.format(
-            type(error), error))
         return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
     except Exception as error:
         LOGGER.debug('Error deleting cluster: {}: {}'.format(
@@ -217,14 +207,13 @@ def list_cluster_members(message, bus):
     :returns: A jsonrpc structure.
     :rtype: dict
     """
-    response = None
     try:
-        cluster = bus.request('storage.get', params=[
-            'Cluster', {'name': message['params']['name']}, True])
-        LOGGER.debug('Cluster found: {}'.format(cluster['result']['name']))
-        LOGGER.debug('Returning: {}'.format(response))
+        name = message['params']['name']
+        cluster = bus.storage.get_cluster(name)
+        LOGGER.debug('Cluster found: {}'.format(cluster.name))
+        LOGGER.debug('Returning: {}'.format(cluster.hostset))
         return create_response(
-            message['id'], result=cluster['result']['hostset'])
+            message['id'], result=cluster.hostset)
     except Exception as error:
         return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
 
@@ -249,14 +238,13 @@ def update_cluster_members(message, bus):
         return return_error(message, error, JSONRPC_ERRORS['BAD_REQUEST'])
 
     try:
-        cluster = bus.request('storage.get', params=[
-            'Cluster', {'name': message['params']['name']}, True])
+        name = message['params']['name']
+        cluster = bus.storage.get_cluster(name)
     except Exception as error:
         return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
 
-    if old_hosts != set(cluster['result']['hostset']):
-        msg = 'Conflict setting hosts for cluster {0}'.format(
-            cluster['result']['name'])
+    if old_hosts != set(cluster.hostset):
+        msg = 'Conflict setting hosts for cluster {0}'.format(name)
         LOGGER.error(msg)
         return return_error(message, msg, JSONRPC_ERRORS['CONFLICT'])
 
@@ -268,13 +256,10 @@ def update_cluster_members(message, bus):
     #        the cluster record and writing it back with some parts
     #        unmodified.  Use either locking or a conditional write
     #        with the etcd 'modifiedIndex'.  Deferring for now.
-    cluster['result']['hostset'] = list(new_hosts)
-    cluster = models.Cluster.new(**cluster['result'])
-    cluster._validate()
-    response = bus.request(
-        'storage.save', params=[
-            'Cluster', cluster.to_dict()])
-    return create_response(message['id'], response['result'])
+    cluster.hostset = list(new_hosts)
+    saved_cluster = bus.storage.save(cluster)
+    # XXX Using to_dict() instead of to_dict_safe() to include hostset.
+    return create_response(message['id'], saved_cluster.to_dict())
 
 
 def check_cluster_member(message, bus):
@@ -289,11 +274,12 @@ def check_cluster_member(message, bus):
     :rtype: dict
     """
     try:
-        cluster = bus.request('storage.get', params=[
-            'Cluster', {'name': message['params']['name']}, True])
-        if message['params']['host'] in cluster['result']['hostset']:
+        host = message['params']['host']
+        name = message['params']['name']
+        cluster = bus.storage.get_cluster(name)
+        if host in cluster.hostset:
             # Return back the host in a list
-            return create_response(message['id'], [message['params']['host']])
+            return create_response(message['id'], [host])
         else:
             return create_response(
                 message['id'],
@@ -318,10 +304,11 @@ def add_cluster_member(message, bus):
     :rtype: dict
     """
     try:
-        cluster = bus.request('storage.get', params=[
-            'Cluster', {'name': message['params']['name']}, True])
+        host = message['params']['host']
+        name = message['params']['name']
+        cluster = bus.storage.get_cluster(name)
 
-        if message['params']['host'] not in cluster['result']['hostset']:
+        if host not in cluster.hostset:
             # FIXME: Need input validation.
             #        - Does the host exist at /commissaire/hosts/{IP}?
             #        - Does the host already belong to another cluster?
@@ -330,12 +317,11 @@ def add_cluster_member(message, bus):
             #        the cluster record and writing it back with some parts
             #        unmodified.  Use either locking or a conditional write
             #        with the etcd 'modifiedIndex'.  Deferring for now.
-            cluster['result']['hostset'].append(message['params']['host'])
-            bus.request('storage.save', params=[
-                'Cluster', cluster['result'], True])
+            cluster.hostset.append(host)
+            bus.storage.save(cluster)
 
         # Return back the host in a list
-        return create_response(message['id'], [message['params']['host']])
+        return create_response(message['id'], [host])
     except Exception as error:
         return create_response(
             message['id'],
@@ -355,20 +341,18 @@ def delete_cluster_member(message, bus):
     :rtype: dict
     """
     try:
-        cluster = bus.request('storage.get', params=[
-            'Cluster', {'name': message['params']['name']}, True])
-        if message['params']['host'] in cluster['result']['hostset']:
+        host = message['params']['host']
+        name = message['params']['name']
+        cluster = bus.storage.get_cluster(name)
+        if host in cluster.hostset:
             # FIXME: Should guard against races here, since we're fetching
             #        the cluster record and writing it back with some parts
             #        unmodified.  Use either locking or a conditional write
             #        with the etcd 'modifiedIndex'.  Deferring for now.
-            idx = cluster['result']['hostset'].index(message['params']['host'])
-            cluster['result']['hostset'].pop(idx)
-            bus.request('storage.save', params=[
-                'Cluster', cluster['result'], True])
-        return create_response(
-            message['id'],
-            [])
+            idx = cluster.hostset.index(host)
+            cluster.hostset.pop(idx)
+            bus.storage.save(cluster)
+        return create_response(message['id'], [])
     except Exception as error:
         return create_response(
             message['id'],
