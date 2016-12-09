@@ -203,8 +203,15 @@ class CommissaireHttpServer:
         :type qkwargs: list
         """
         self.logger.debug('Setting up bus connection.')
-        self.bus = Bus(exchange_name, connection_url, qkwargs)
+        bus_init_kwargs = {
+            'exchange_name': exchange_name,
+            'connection_url': connection_url,
+            'qkwargs': qkwargs}
+        self.bus = Bus(**bus_init_kwargs)
+        self.logger.debug('Bus instance created with: {}'.format(
+            bus_init_kwargs))
         self.bus.connect()
+        # Inject the bus
         self.dispatcher._bus = self.bus
         self.logger.info('Bus connection ready.')
 
