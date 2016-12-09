@@ -25,7 +25,6 @@ from importlib import import_module
 from inspect import signature, isfunction, isclass
 from urllib.parse import parse_qs
 
-from commissaire_http.bus import Bus
 from commissaire_http.constants import JSONRPC_ERRORS
 
 
@@ -69,6 +68,13 @@ def ls_mod(mod, pkg):
             yield item, attr, mod_path
 
 
+class DispatcherError(Exception):  # pragma: no cover
+    """
+    Dispatcher related errors.
+    """
+    pass
+
+
 class Dispatcher:
     """
     Dispatches and translates between HTTP requests and bus services.
@@ -77,7 +83,7 @@ class Dispatcher:
     #: Logging instance for all Dispatchers
     logger = logging.getLogger('Dispatcher')
 
-    def __init__(self, router, handler_packages):
+    def __init__(self, router, handler_packages, bus=None):
         """
         Initializes a new Dispatcher instance.
 
@@ -85,12 +91,14 @@ class Dispatcher:
         :type router: router.TopicRouter
         :param handler_packages: List of packages to load handlers from.
         :type handler_packages: list
+        :param bus: A connected Bus instance for use during dispatching.
+        :type bus: commissaire_http.bus.Bus
         """
         self._router = router
         self._handler_packages = handler_packages
         self._handler_map = {}
         self.reload_handlers()
-        self._bus = None
+        self._bus = bus
 
     def reload_handlers(self):
         """
@@ -170,6 +178,11 @@ class Dispatcher:
         :returns: The body of the HTTP response.
         :rtype: Mixed
         """
+        # Fail early if _bus has never been set.
+        if self._bus is None:
+            raise DispatcherError(
+                'Bus can not be None when dispatching. '
+                'Please set Dispatcher_bus.')
         route_info = self._router.routematch(environ['PATH_INFO'], environ)
 
         # If we have valid route_info
@@ -201,13 +214,8 @@ class Dispatcher:
                     handler = self._handler_map.get(route['controller'])
                 self.logger.debug('Using controller {}->{}'.format(
                     route, handler))
-                # Pass the message and, if needed, a new instance of the
-                # bus to the handler
-                bus = None
-                if self._bus:
-                    bus = Bus(**self._bus.init_kwargs).connect()
 
-                result = handler(jsonrpc_msg, bus=bus)
+                result = handler(jsonrpc_msg, bus=self._bus)
                 self.logger.debug(
                     'Handler {} returned "{}"'.format(
                         route['controller'], result))

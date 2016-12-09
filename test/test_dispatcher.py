@@ -22,6 +22,7 @@ from io import BytesIO
 
 from . import TestCase, mock
 
+from commissaire_http.bus import Bus
 from commissaire_http.dispatcher import Dispatcher
 from commissaire_http.router import Router
 
@@ -46,7 +47,8 @@ class TestDispatcher(TestCase):
             conditions={'method': 'PUT'})
         self.dispatcher_instance = Dispatcher(
             self.router_instance,
-            handler_packages=['commissaire_http.handlers']
+            handler_packages=['commissaire_http.handlers'],
+            bus=mock.MagicMock('Bus')
         )
 
     def test_dispatcher_initialization(self):
