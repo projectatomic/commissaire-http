@@ -107,7 +107,7 @@ class TestDispatcher(TestCase):
         }
         start_response = mock.MagicMock()
         result = self.dispatcher_instance.dispatch(environ, start_response)
-        start_response.assert_called_once_with('200 OK', mock.ANY)
+        start_response.assert_called_once_with('201 Created', mock.ANY)
         self.assertEquals('world', json.loads(result[0].decode())['name'])
 
     def test_dispatcher_dispatch_with_invalid_path(self):

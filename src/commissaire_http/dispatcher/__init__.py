@@ -240,8 +240,12 @@ class Dispatcher:
                     # Otherwise treat it like a 500 by raising
                     raise Exception(result['error'])
                 elif 'result' in result.keys():
+                    if environ['REQUEST_METHOD'] == 'PUT':
+                        status = '201 Created'
+                    else:
+                        status = '200 OK'
                     start_response(
-                        '200 OK', [('content-type', 'application/json')])
+                        status, [('content-type', 'application/json')])
                     return [bytes(json.dumps(result['result']), 'utf8')]
             except Exception as error:
                 self.logger.error(
