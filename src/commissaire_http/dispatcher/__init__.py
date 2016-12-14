@@ -240,10 +240,13 @@ class Dispatcher:
                     # Otherwise treat it like a 500 by raising
                     raise Exception(result['error'])
                 elif 'result' in result.keys():
+                    status = '200 OK'
                     if environ['REQUEST_METHOD'] == 'PUT':
-                        status = '201 Created'
-                    else:
-                        status = '200 OK'
+                        # action=add is for endpoints that add a
+                        # member to a set, in which case nothing
+                        # is being created, so return 200 OK.
+                        if route.get('action') != 'add':
+                            status = '201 Created'
                     start_response(
                         status, [('content-type', 'application/json')])
                     return [bytes(json.dumps(result['result']), 'utf8')]

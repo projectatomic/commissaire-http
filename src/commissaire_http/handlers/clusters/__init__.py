@@ -63,7 +63,8 @@ def _register(router):
         R'/api/v0/cluster/{name}/hosts/',
         requirements={'name': ROUTING_RX_PARAMS['name']},
         controller=update_cluster_members,
-        conditions={'method': 'PUT'})
+        conditions={'method': 'PUT'},
+        action='add')
     router.connect(
         R'/api/v0/cluster/{name}/hosts/{host}/',
         requirements={
@@ -79,7 +80,8 @@ def _register(router):
             'host': ROUTING_RX_PARAMS['host'],
         },
         controller=add_cluster_member,
-        conditions={'method': 'PUT'})
+        conditions={'method': 'PUT'},
+        action='add')
     router.connect(
         R'/api/v0/cluster/{name}/hosts/{host}/',
         requirements={
