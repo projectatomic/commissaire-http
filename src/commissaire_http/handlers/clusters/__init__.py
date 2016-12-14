@@ -60,6 +60,11 @@ def _register(router):
         controller=list_cluster_members,
         conditions={'method': 'GET'})
     router.connect(
+        R'/api/v0/cluster/{name}/hosts/',
+        requirements={'name': ROUTING_RX_PARAMS['name']},
+        controller=update_cluster_members,
+        conditions={'method': 'PUT'})
+    router.connect(
         R'/api/v0/cluster/{name}/hosts/{host}/',
         requirements={
             'name': ROUTING_RX_PARAMS['name'],
