@@ -19,8 +19,6 @@ Commissaire HTTP based application server.
 import argparse
 import importlib
 
-from commissaire.util.logging import setup_logging
-
 from commissaire_http.authentication import (
     AuthenticationManager, Authenticator)
 from commissaire_http.server.routing import DISPATCHER  # noqa
@@ -71,15 +69,6 @@ def main():
     epilog = 'Example: commissaire -c conf/myconfig.json'
     parser = argparse.ArgumentParser(epilog=epilog)
     args = parse_args(parser)
-
-    components = ('authentication',
-                  'AuthenticationManager',
-                  'Dispatcher',
-                  'Router',
-                  'Bus',
-                  'CommissaireHttpServer',
-                  'Handlers')
-    setup_logging(args, components)
 
     try:
         # Inject the authentication plugin
