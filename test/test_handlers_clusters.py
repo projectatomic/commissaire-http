@@ -22,6 +22,7 @@ from unittest import mock
 
 from . import TestCase, expected_error
 
+from commissaire import constants as C
 from commissaire import bus as _bus
 from commissaire.constants import JSONRPC_ERRORS
 from commissaire_http.handlers import create_response, clusters
@@ -93,7 +94,7 @@ class Test_clusters(TestCase):
                 'name': 'test',
                 'hosts': {'available': 0, 'total': 0, 'unavailable': 0},
                 'network': 'default',
-                'status': '',
+                'status': C.CLUSTER_STATUS_OK,
                 'container_manager': '',
             }),
             clusters.get_cluster(SIMPLE_CLUSTER_REQUEST, bus))

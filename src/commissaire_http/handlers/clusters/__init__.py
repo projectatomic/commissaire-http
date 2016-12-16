@@ -124,18 +124,23 @@ def get_cluster(message, bus):
     """
     name = message['params']['name']
     cluster = bus.storage.get_cluster(name)
-    container = bus.storage.list(models.Hosts)
 
     available = unavailable = total = 0
 
-    for host in container.hosts:
-        if host.address in cluster.hostset:
-            total += 1
-            if host.status == 'active':
-                available += 1
-            else:
-                unavailable += 1
+    cluster.status = C.CLUSTER_STATUS_OK
+    for host_address in cluster.hostset:
+        host = bus.storage.get(host_address)
+        total += 1
+        if host.status == 'active':
+            available += 1
+        else:
+            unavailable += 1
+            cluster.status = C.CLUSTER_STATUS_DEGRADED
 
+    # If we have 1 or more hosts and none are active consider the cluster
+    # in failed status
+    if total > 0 and total == unavailable:
+        cluster.status = C.CLUSTER_STATUS_FAILED
     cluster.hosts['total'] = total
     cluster.hosts['available'] = available
     cluster.hosts['unavailable'] = unavailable
