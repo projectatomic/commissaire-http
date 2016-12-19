@@ -211,17 +211,21 @@ def delete_host(message, bus):
         bus.storage.delete(models.Host.new(address=address))
         # TODO: kick off service job to remove the host?
 
-        # Remove from a cluster
-        container = bus.storage.list(models.Clusters)
-        for cluster in container.clusters:
-            if address in cluster.hostset:
-                LOGGER.info('Removing host "{}" from cluster "{}"'.format(
-                    address, cluster.name))
-                cluster.hostset.pop(
-                    cluster.hostset.index(address))
-                bus.storage.save(cluster)
-                # A host can only be part of one cluster so break the loop
-                break
+        try:
+            # Remove from a cluster
+            container = bus.storage.list(models.Clusters)
+            for cluster in container.clusters:
+                if address in cluster.hostset:
+                    LOGGER.info('Removing host "{}" from cluster "{}"'.format(
+                        address, cluster.name))
+                    cluster.hostset.pop(
+                        cluster.hostset.index(address))
+                    bus.storage.save(cluster)
+                    # A host can only be part of one cluster so break the loop
+                    break
+        except _bus.RemoteProcedureCallError as error:
+            LOGGER.info('{} not part of a cluster.'.format(address))
+
         return create_response(message['id'], [])
     except _bus.RemoteProcedureCallError as error:
         return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
