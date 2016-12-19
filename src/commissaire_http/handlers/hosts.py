@@ -128,7 +128,15 @@ def create_host(message, bus):
             message, '"address" must be given in the url or in the PUT body',
             JSONRPC_ERRORS['INVALID_PARAMETERS'])
 
+    # If a cluster if provided, grab it from storage
     cluster_name = message['params'].get('cluster')
+    if cluster_name:
+        cluster = _does_cluster_exist(bus, cluster_name)
+        if not cluster:
+            return return_error(
+                message, 'Cluster does not exist',
+                JSONRPC_ERRORS['INVALID_PARAMETERS'])
+        LOGGER.debug('Found cluster. Data: "{}"'.format(cluster))
 
     try:
         host = bus.storage.get_host(address)
@@ -139,19 +147,12 @@ def create_host(message, bus):
             return return_error(
                 message, 'Host already exists', JSONRPC_ERRORS['CONFLICT'])
 
-        # Verify the cluster exists and it's in the cluster
-        if cluster_name:
-            cluster = _does_cluster_exist(bus, cluster_name)
-            if not cluster:
-                return return_error(
-                    message, 'Cluster does not exist',
-                    JSONRPC_ERRORS['INVALID_PARAMETERS'])
-            # Verify the host is in the cluster
-            if address not in cluster.hostset:
-                LOGGER.debug('Host "{}" is not in cluster "{}"'.format(
-                    address, cluster_name))
-                return return_error(
-                    message, 'Host not in cluster', JSONRPC_ERRORS['CONFLICT'])
+        # Verify the host is in the cluster if it is expected
+        if cluster_name and address not in cluster.hostset:
+            LOGGER.debug('Host "{}" is not in cluster "{}"'.format(
+                address, cluster_name))
+            return return_error(
+                message, 'Host not in cluster', JSONRPC_ERRORS['CONFLICT'])
 
         # Return out now. No more processing needed.
         return create_response(message['id'], host.to_dict_safe())
@@ -160,22 +161,13 @@ def create_host(message, bus):
         LOGGER.debug('Brand new host "{}" being created.'.format(
             message['params']['address']))
 
+    # Save the host to the cluster if it isn't already there
     if cluster_name:
-        # Verify the cluster existence and add the host to it
-        cluster = _does_cluster_exist(bus, cluster_name)
-        if not cluster:
-            LOGGER.warn(
-                'create_host could not find cluster "{}" for the creation '
-                'of new host "{}"'.format(cluster_name, address))
-            return return_error(
-                message,
-                'Cluster does not exist',
-                JSONRPC_ERRORS['INVALID_PARAMETERS'])
-
-        LOGGER.debug('Found cluster. Data: "{}"'.format(cluster))
         if address not in cluster.hostset:
             cluster.hostset.append(address)
             bus.storage.save(cluster)
+            LOGGER.debug('Saved host "{}" to cluster "{}"'.format(
+                address, cluster_name))
 
     try:
         host = bus.storage.save(models.Host.new(**message['params']))
