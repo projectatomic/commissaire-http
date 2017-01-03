@@ -18,6 +18,7 @@ Prototype dispatcher.
 
 import json
 import logging
+import traceback
 import uuid
 
 from html import escape
@@ -252,8 +253,9 @@ class Dispatcher:
                     return [bytes(json.dumps(result['result']), 'utf8')]
             except Exception as error:
                 self.logger.error(
-                    'Exception raised while {} handled "{}". {}: {}'.format(
-                        route['controller'], jsonrpc_msg, type(error), error))
+                    'Exception raised while {} handled "{}":\n{}'.format(
+                        route['controller'], jsonrpc_msg,
+                        traceback.format_exc()))
                 start_response(
                     '500 Internal Server Error',
                     [('content-type', 'text/html')])
