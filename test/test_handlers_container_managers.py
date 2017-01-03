@@ -90,7 +90,8 @@ class Test_container_managers(TestCase):
         """
         bus = mock.MagicMock()
         # ContainerManagerConfig doesn't yet exist
-        bus.storage.get.side_effect = _bus.RemoteProcedureCallError('test')
+        bus.storage.get.side_effect = _bus.StorageLookupError(
+            'test', CONTAINER_MANAGER_CONFIG)
         # Creation response
         bus.storage.save.return_value = CONTAINER_MANAGER_CONFIG
         self.assertEquals(

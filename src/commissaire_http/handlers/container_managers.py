@@ -91,8 +91,10 @@ def get_container_manager(message, bus):
 
         return create_response(
             message['id'], container_manager_cfg.to_dict_safe())
-    except _bus.RemoteProcedureCallError as error:
+    except _bus.StorageLookupError as error:
         return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
+    except Exception as error:
+        return return_error(message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
 
 
 def create_container_manager(message, bus):
@@ -126,7 +128,7 @@ def create_container_manager(message, bus):
             message,
             'A ContainerManager with that name already exists.',
             JSONRPC_ERRORS['CONFLICT'])
-    except _bus.RemoteProcedureCallError as error:
+    except _bus.StorageLookupError as error:
         LOGGER.info(
             'Attempting to create new ContainerManagerConfig: "{}"'.format(
                 message['params']))
@@ -157,7 +159,7 @@ def delete_container_manager(message, bus):
             name))
         bus.storage.delete(models.ContainerManagerConfig.new(name=name))
         return create_response(message['id'], [])
-    except _bus.RemoteProcedureCallError as error:
+    except _bus.StorageLookupError as error:
         return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
     except Exception as error:
         LOGGER.debug('Error deleting ContainerManagerConfig: {}: {}'.format(

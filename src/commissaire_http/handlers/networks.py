@@ -68,10 +68,13 @@ def list_networks(message, bus):
     :returns: A jsonrpc structure.
     :rtype: dict
     """
-    container = bus.storage.list(models.Networks)
-    return create_response(
-        message['id'],
-        [network.name for network in container.networks])
+    try:
+        container = bus.storage.list(models.Networks)
+        return create_response(
+            message['id'],
+            [network.name for network in container.networks])
+    except Exception as error:
+        return return_error(message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
 
 
 def get_network(message, bus):
@@ -89,8 +92,10 @@ def get_network(message, bus):
         name = message['params']['name']
         network = bus.storage.get_network(name)
         return create_response(message['id'], network.to_dict_safe())
-    except _bus.RemoteProcedureCallError as error:
+    except _bus.StorageLookupError as error:
         return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
+    except Exception as error:
+        return return_error(message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
 
 
 def create_network(message, bus):
@@ -123,7 +128,7 @@ def create_network(message, bus):
             message,
             'A network with that name already exists.',
             JSONRPC_ERRORS['CONFLICT'])
-    except _bus.RemoteProcedureCallError as error:
+    except _bus.StorageLookupError as error:
         LOGGER.info('Attempting to create new network: "{}"'.format(
             message['params']))
 
@@ -152,7 +157,7 @@ def delete_network(message, bus):
         LOGGER.debug('Attempting to delete network "{}"'.format(name))
         bus.storage.delete(models.Network.new(name=name))
         return create_response(message['id'], [])
-    except _bus.RemoteProcedureCallError as error:
+    except _bus.StorageLookupError as error:
         return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
     except Exception as error:
         LOGGER.debug('Error deleting network: {}: {}'.format(

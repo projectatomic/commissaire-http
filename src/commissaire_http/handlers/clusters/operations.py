@@ -93,7 +93,9 @@ def get_cluster_deploy(message, bus):
         LOGGER.info('Invalid data retrieved. "{}"'.format(error))
         LOGGER.debug('Data="{}"'.format(message['params']))
         return return_error(message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
-    except _bus.RemoteProcedureCallError as error:
+    except _bus.StorageLookupError as error:
+        return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
+    except Exception as error:
         return return_error(message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
 
 
@@ -123,7 +125,7 @@ def create_cluster_deploy(message, bus):
         LOGGER.info('Invalid data provided. "{}"'.format(error))
         LOGGER.debug('Data="{}"'.format(message['params']))
         return return_error(message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
-    except _bus.RemoteProcedureCallError as error:
+    except Exception as error:
         LOGGER.debug('Error creating ClusterDeploy: {}: {}'.format(
             type(error), error))
         return return_error(message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
@@ -210,7 +212,9 @@ def get_cluster_operation(model_cls, message, bus):
         LOGGER.info('Invalid data retrieved. "{}"'.format(error))
         LOGGER.debug('Data="{}"'.format(message['params']))
         return return_error(message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
-    except _bus.RemoteProcedureCallError as error:
+    except _bus.StorageLookupError as error:
+        return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
+    except Exception as error:
         LOGGER.debug('Error getting {}: {}: {}'.format(
             model_cls.__name__, type(error), error))
         return return_error(message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
@@ -255,7 +259,7 @@ def create_cluster_operation(model_cls, message, bus, routing_key):
         LOGGER.info('Invalid data provided. "{}"'.format(error))
         LOGGER.debug('Data="{}"'.format(message['params']))
         return return_error(message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
-    except _bus.RemoteProcedureCallError as error:
+    except Exception as error:
         LOGGER.debug('Error creating {}: {}: {}'.format(
             model_cls.__name__, type(error), error))
         return return_error(message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])

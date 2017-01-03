@@ -200,7 +200,7 @@ def delete_cluster(message, bus):
         LOGGER.debug('Attempting to delete cluster "{}"'.format(name))
         bus.storage.delete(models.Cluster.new(name=name))
         return create_response(message['id'], [])
-    except _bus.RemoteProcedureCallError as error:
+    except _bus.StorageLookupError as error:
         return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
     except Exception as error:
         LOGGER.debug('Error deleting cluster: {}: {}'.format(
@@ -226,8 +226,12 @@ def list_cluster_members(message, bus):
         LOGGER.debug('Returning: {}'.format(cluster.hostset))
         return create_response(
             message['id'], result=cluster.hostset)
-    except Exception as error:
+    except _bus.StorageLookupError as error:
         return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
+    except Exception as error:
+        LOGGER.debug('Error listing cluster: {}: {}'.format(
+            type(error), error))
+        return return_error(message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
 
 
 def update_cluster_members(message, bus):
@@ -252,7 +256,7 @@ def update_cluster_members(message, bus):
     try:
         name = message['params']['name']
         cluster = bus.storage.get_cluster(name)
-    except Exception as error:
+    except _bus.StorageLookupError as error:
         return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
 
     if old_hosts != set(cluster.hostset):

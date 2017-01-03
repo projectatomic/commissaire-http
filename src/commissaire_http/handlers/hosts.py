@@ -305,6 +305,7 @@ def _does_cluster_exist(bus, cluster_name):
         cluster = bus.storage.get_cluster(cluster_name)
         LOGGER.debug('Found cluster: "{}"'.format(cluster))
         return cluster
-    except _bus.RemoteProcedureCallError as error:
+    except _bus.StorageLookupError as error:
         LOGGER.warn(
             'create_host could not find cluster "{}"'.format(cluster_name))
+        return None

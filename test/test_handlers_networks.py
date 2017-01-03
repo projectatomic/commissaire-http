@@ -75,7 +75,7 @@ class Test_networks(TestCase):
         """
         bus = mock.MagicMock()
         # Network doesn't yet exist
-        bus.storage.get.side_effect = _bus.RemoteProcedureCallError('test')
+        bus.storage.get.side_effect = _bus.StorageLookupError('test', NETWORK)
         # Creation response
         bus.storage.save.return_value = NETWORK
         self.assertEquals(
