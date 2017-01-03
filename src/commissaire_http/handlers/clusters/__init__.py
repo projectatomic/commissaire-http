@@ -129,7 +129,7 @@ def get_cluster(message, bus):
 
     cluster.status = C.CLUSTER_STATUS_OK
     for host_address in cluster.hostset:
-        host = bus.storage.get(host_address)
+        host = bus.storage.get_host(host_address)
         total += 1
         if host.status == 'active':
             available += 1
