@@ -155,11 +155,13 @@ class Dispatcher:
 
         # If we are a PUT or POST look for params in wsgi.input
         if environ['REQUEST_METHOD'] in ('PUT', 'POST'):
-            if environ.get('CONTENT_LENGTH') and environ['CONTENT_LENGTH']:
+            content_length = int(environ.get('CONTENT_LENGTH', 0))
+            if content_length > 0:
                 try:
-                    params.update(json.loads(environ['wsgi.input'].read(
-                        int(environ['CONTENT_LENGTH'])).decode()))
-                except json.decoder.JSONDecodeError as error:
+                    wsgi_input = environ['wsgi.input'].read(content_length)
+                    more_params = eval(wsgi_input.decode())
+                    params.update(more_params)
+                except (ValueError, json.decoder.JSONDecodeError) as error:
                     self.logger.debug(
                         'Unable to read "wsgi.input": {}'.format(error))
         else:
@@ -191,8 +193,14 @@ class Dispatcher:
             # Split up the route from the route data
             route, route_data = route_info
 
-            # Get the parameter
-            params = self._get_params(environ, route, route_data)
+            # Get the parameters
+            try:
+                params = self._get_params(environ, route, route_data)
+            except Exception as error:
+                start_response(
+                    '400 Bad Request',
+                    [('content-type', 'text/html')])
+                return [bytes('Bad Request', 'utf8')]
 
             # method is normally supposed to be the method to be called
             # but we hijack it for the method that was used over HTTP
