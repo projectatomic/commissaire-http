@@ -159,7 +159,7 @@ class Dispatcher:
             if content_length > 0:
                 try:
                     wsgi_input = environ['wsgi.input'].read(content_length)
-                    more_params = eval(wsgi_input.decode())
+                    more_params = json.loads(wsgi_input.decode())
                     params.update(more_params)
                 except (ValueError, json.decoder.JSONDecodeError) as error:
                     self.logger.debug(
