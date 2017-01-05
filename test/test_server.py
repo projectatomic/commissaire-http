@@ -30,8 +30,9 @@ class TestServerCli(TestCase):
     Test for the server cli module.
     """
 
+    @mock.patch('commissaire_http.server.cli.DISPATCHER')
     @mock.patch('commissaire_http.server.cli.CommissaireHttpServer')
-    def test_main(self, _server):
+    def test_main(self, _server, _dispatcher):
         """
         Verify the server is started when main is executed.
         """

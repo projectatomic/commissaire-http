@@ -47,9 +47,8 @@ class TestDispatcher(TestCase):
             conditions={'method': 'PUT'})
         self.dispatcher_instance = Dispatcher(
             self.router_instance,
-            handler_packages=['commissaire_http.handlers'],
-            bus=mock.MagicMock('Bus')
-        )
+            handler_packages=['commissaire_http.handlers'])
+        self.dispatcher_instance._bus = mock.MagicMock('Bus')
 
     def test_dispatcher_initialization(self):
         """

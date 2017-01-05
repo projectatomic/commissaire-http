@@ -26,6 +26,7 @@ from importlib import import_module
 from inspect import signature, isfunction, isclass
 from urllib.parse import parse_qs
 
+from commissaire_http.bus import Bus
 from commissaire_http.constants import JSONRPC_ERRORS
 
 
@@ -84,7 +85,7 @@ class Dispatcher:
     #: Logging instance for all Dispatchers
     logger = logging.getLogger('Dispatcher')
 
-    def __init__(self, router, handler_packages, bus=None):
+    def __init__(self, router, handler_packages):
         """
         Initializes a new Dispatcher instance.
 
@@ -92,14 +93,37 @@ class Dispatcher:
         :type router: router.TopicRouter
         :param handler_packages: List of packages to load handlers from.
         :type handler_packages: list
-        :param bus: A connected Bus instance for use during dispatching.
-        :type bus: commissaire_http.bus.Bus
         """
         self._router = router
         self._handler_packages = handler_packages
         self._handler_map = {}
         self.reload_handlers()
-        self._bus = bus
+        self._bus = None
+
+    def setup_bus(self, exchange_name, connection_url, qkwargs):
+        """
+        Sets up a bus connection with the given configuration.
+
+        Call this method only once after instantiating a Dispatcher.
+
+        :param exchange_name: Name of the topic exchange
+        :type exchange_name: str
+        :param connection_url: Kombu connection URL
+        :type connection_url: str
+        :param qkwargs: One or more keyword argument dicts for queue creation
+        :type qkwargs: list
+        """
+        self.logger.debug('Setting up bus connection.')
+        bus_init_kwargs = {
+            'exchange_name': exchange_name,
+            'connection_url': connection_url,
+            'qkwargs': qkwargs
+        }
+        self._bus = Bus(**bus_init_kwargs)
+        self.logger.debug(
+            'Bus instance created with: {}'.format(bus_init_kwargs))
+        self._bus.connect()
+        self.logger.info('Bus connection ready.')
 
     def reload_handlers(self):
         """
@@ -185,7 +209,7 @@ class Dispatcher:
         if self._bus is None:
             raise DispatcherError(
                 'Bus can not be None when dispatching. '
-                'Please set Dispatcher_bus.')
+                'Please call dispatcher.setup_bus().')
         route_info = self._router.routematch(environ['PATH_INFO'], environ)
 
         # If we have valid route_info

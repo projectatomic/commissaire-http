@@ -24,7 +24,6 @@ from socketserver import ThreadingMixIn
 from wsgiref.simple_server import WSGIServer, WSGIRequestHandler, make_server
 
 from commissaire.util.config import read_config_file
-from commissaire_http.bus import Bus
 from commissaire_http.util.cli import parse_to_struct
 
 
@@ -154,8 +153,6 @@ class CommissaireHttpServer:
         :param tls_clientverify_file: Full path to CA to verify certs.
         :type tls_clientverify_file: str
         """
-        # To use the bus call setup_bus()
-        self.bus = None
         self._bind_host = bind_host
         self._bind_port = bind_port
         self._tls_pem_file = tls_pem_file
@@ -190,30 +187,6 @@ class CommissaireHttpServer:
 
         self.logger.debug('Created httpd server: {}:{}'.format(
             self._bind_host, self._bind_port))
-
-    def setup_bus(self, exchange_name, connection_url, qkwargs):
-        """
-        Sets up variables needed for the bus connection.
-
-        :param exchange_name: Name of the topic exchange.
-        :type exchange_name: str
-        :param connection_url: Kombu connection url.
-        :type connection_url: str
-        :param qkwargs: One or more dicts keyword arguments for queue creation
-        :type qkwargs: list
-        """
-        self.logger.debug('Setting up bus connection.')
-        bus_init_kwargs = {
-            'exchange_name': exchange_name,
-            'connection_url': connection_url,
-            'qkwargs': qkwargs}
-        self.bus = Bus(**bus_init_kwargs)
-        self.logger.debug('Bus instance created with: {}'.format(
-            bus_init_kwargs))
-        self.bus.connect()
-        # Inject the bus
-        self.dispatcher._bus = self.bus
-        self.logger.info('Bus connection ready.')
 
     def serve_forever(self):
         """

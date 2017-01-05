@@ -74,6 +74,12 @@ def main():
         # Inject the authentication plugin
         DISPATCHER = inject_authentication(args.authentication_plugins)
 
+        # Connect to the bus
+        DISPATCHER.setup_bus(
+            args.bus_exchange,
+            args.bus_uri,
+            [{'name': 'simple', 'routing_key': 'simple.*'}])
+
         # Create the server
         server = CommissaireHttpServer(
             args.listen_interface,
@@ -81,12 +87,6 @@ def main():
             DISPATCHER,
             args.tls_pemfile,
             args.tls_clientverifyfile)
-
-        # Set up our bus data
-        server.setup_bus(
-            args.bus_exchange,
-            args.bus_uri,
-            [{'name': 'simple', 'routing_key': 'simple.*'}])
 
         # Serve until we are killed off
         server.serve_forever()

@@ -60,11 +60,11 @@ dispatcher = Dispatcher(
         'commissaire_http.handlers.clusters'])
 
 try:
-    server = CommissaireHttpServer('127.0.0.1', 8000, dispatcher)
-    server.setup_bus(
+    dispatcher.setup_bus(
         'commissaire',
         'redis://127.0.0.1:6379/',
         [{'name': 'simple', 'routing_key': 'simple.*'}])
+    server = CommissaireHttpServer('127.0.0.1', 8000, dispatcher)
     server.serve_forever()
 except KeyboardInterrupt:
     pass
