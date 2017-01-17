@@ -21,7 +21,8 @@ from commissaire import models
 from commissaire import bus as _bus
 from commissaire_http.constants import JSONRPC_ERRORS
 
-from commissaire_http.handlers import LOGGER, create_response, return_error
+from commissaire_http.handlers import (
+    LOGGER, create_jsonrpc_response, return_error)
 
 
 def _register(router):
@@ -106,7 +107,7 @@ def list_clusters(message, bus):
     :rtype: dict
     """
     container = bus.storage.list(models.Clusters)
-    return create_response(
+    return create_jsonrpc_response(
         message['id'],
         [cluster.name for cluster in container.clusters])
 
@@ -145,7 +146,7 @@ def get_cluster(message, bus):
     cluster.hosts['available'] = available
     cluster.hosts['unavailable'] = unavailable
 
-    return create_response(message['id'], cluster.to_dict_with_hosts())
+    return create_jsonrpc_response(message['id'], cluster.to_dict_with_hosts())
 
 
 def create_cluster(message, bus):
@@ -179,7 +180,7 @@ def create_cluster(message, bus):
 
     try:
         cluster = bus.storage.save(models.Cluster.new(**message['params']))
-        return create_response(message['id'], cluster.to_dict_safe())
+        return create_jsonrpc_response(message['id'], cluster.to_dict_safe())
     except models.ValidationError as error:
         return return_error(message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
 
@@ -199,7 +200,7 @@ def delete_cluster(message, bus):
         name = message['params']['name']
         LOGGER.debug('Attempting to delete cluster "{}"'.format(name))
         bus.storage.delete(models.Cluster.new(name=name))
-        return create_response(message['id'], [])
+        return create_jsonrpc_response(message['id'], [])
     except _bus.StorageLookupError as error:
         return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
     except Exception as error:
@@ -224,7 +225,7 @@ def list_cluster_members(message, bus):
         cluster = bus.storage.get_cluster(name)
         LOGGER.debug('Cluster found: {}'.format(cluster.name))
         LOGGER.debug('Returning: {}'.format(cluster.hostset))
-        return create_response(
+        return create_jsonrpc_response(
             message['id'], result=cluster.hostset)
     except _bus.StorageLookupError as error:
         return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
@@ -275,7 +276,7 @@ def update_cluster_members(message, bus):
     cluster.hostset = list(new_hosts)
     saved_cluster = bus.storage.save(cluster)
     # XXX Using to_dict() instead of to_dict_safe() to include hostset.
-    return create_response(message['id'], saved_cluster.to_dict())
+    return create_jsonrpc_response(message['id'], saved_cluster.to_dict())
 
 
 def check_cluster_member(message, bus):
@@ -295,9 +296,9 @@ def check_cluster_member(message, bus):
         cluster = bus.storage.get_cluster(name)
         if host in cluster.hostset:
             # Return back the host in a list
-            return create_response(message['id'], [host])
+            return create_jsonrpc_response(message['id'], [host])
         else:
-            return create_response(
+            return create_jsonrpc_response(
                 message['id'],
                 error='The requested host is not part of the cluster.',
                 error_code=JSONRPC_ERRORS['NOT_FOUND'])
@@ -334,7 +335,7 @@ def add_cluster_member(message, bus):
             bus.storage.save(cluster)
 
         # Return back the host in a list
-        return create_response(message['id'], [host])
+        return create_jsonrpc_response(message['id'], [host])
     except Exception as error:
         return return_error(message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
 
@@ -362,6 +363,6 @@ def delete_cluster_member(message, bus):
             idx = cluster.hostset.index(host)
             cluster.hostset.pop(idx)
             bus.storage.save(cluster)
-        return create_response(message['id'], [])
+        return create_jsonrpc_response(message['id'], [])
     except Exception as error:
         return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])

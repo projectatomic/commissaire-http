@@ -19,7 +19,8 @@ Networks handlers.
 from commissaire import models
 from commissaire import bus as _bus
 from commissaire_http.constants import JSONRPC_ERRORS
-from commissaire_http.handlers import LOGGER, create_response, return_error
+from commissaire_http.handlers import (
+    LOGGER, create_jsonrpc_response, return_error)
 
 
 def _register(router):
@@ -70,7 +71,7 @@ def list_networks(message, bus):
     """
     try:
         container = bus.storage.list(models.Networks)
-        return create_response(
+        return create_jsonrpc_response(
             message['id'],
             [network.name for network in container.networks])
     except Exception as error:
@@ -91,7 +92,7 @@ def get_network(message, bus):
     try:
         name = message['params']['name']
         network = bus.storage.get_network(name)
-        return create_response(message['id'], network.to_dict_safe())
+        return create_jsonrpc_response(message['id'], network.to_dict_safe())
     except _bus.StorageLookupError as error:
         return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
     except Exception as error:
@@ -121,7 +122,8 @@ def create_network(message, bus):
 
         # If they are the same thing then go ahead and return success
         if saved_network.to_dict() == input_network.to_dict():
-            return create_response(message['id'], saved_network.to_dict_safe())
+            return create_jsonrpc_response(
+                message['id'], saved_network.to_dict_safe())
 
         # Otherwise error with a CONFLICT
         return return_error(
@@ -136,7 +138,8 @@ def create_network(message, bus):
     try:
         input_network = models.Network.new(**message['params'])
         saved_network = bus.storage.save(input_network)
-        return create_response(message['id'], saved_network.to_dict_safe())
+        return create_jsonrpc_response(
+            message['id'], saved_network.to_dict_safe())
     except models.ValidationError as error:
         return return_error(message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
 
@@ -156,7 +159,7 @@ def delete_network(message, bus):
         name = message['params']['name']
         LOGGER.debug('Attempting to delete network "{}"'.format(name))
         bus.storage.delete(models.Network.new(name=name))
-        return create_response(message['id'], [])
+        return create_jsonrpc_response(message['id'], [])
     except _bus.StorageLookupError as error:
         return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
     except Exception as error:

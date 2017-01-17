@@ -22,7 +22,8 @@ from commissaire import models
 from commissaire import bus as _bus
 from commissaire_http.constants import JSONRPC_ERRORS
 
-from commissaire_http.handlers import LOGGER, create_response, return_error
+from commissaire_http.handlers import (
+    LOGGER, create_jsonrpc_response, return_error)
 
 
 def _register(router):
@@ -88,7 +89,8 @@ def get_cluster_deploy(message, bus):
         cluster_deploy = bus.storage.get(models.ClusterDeploy.new(name=name))
         cluster_deploy._validate()
 
-        return create_response(message['id'], cluster_deploy.to_dict_safe())
+        return create_jsonrpc_response(
+            message['id'], cluster_deploy.to_dict_safe())
     except models.ValidationError as error:
         LOGGER.info('Invalid data retrieved. "{}"'.format(error))
         LOGGER.debug('Data="{}"'.format(message['params']))
@@ -120,7 +122,7 @@ def create_cluster_deploy(message, bus):
             'jobs.clusterexec.deploy', params=[
                 cluster_deploy.name,
                 cluster_deploy.version])
-        return create_response(message['id'], result['result'])
+        return create_jsonrpc_response(message['id'], result['result'])
     except models.ValidationError as error:
         LOGGER.info('Invalid data provided. "{}"'.format(error))
         LOGGER.debug('Data="{}"'.format(message['params']))
@@ -207,7 +209,7 @@ def get_cluster_operation(model_cls, message, bus):
         model = bus.storage.get(model_cls.new(name=name))
         model._validate()
 
-        return create_response(message['id'], model.to_dict_safe())
+        return create_jsonrpc_response(message['id'], model.to_dict_safe())
     except models.ValidationError as error:
         LOGGER.info('Invalid data retrieved. "{}"'.format(error))
         LOGGER.debug('Data="{}"'.format(message['params']))
@@ -254,7 +256,7 @@ def create_cluster_operation(model_cls, message, bus, routing_key):
 
         # XXX Assumes the only method argument is cluster_name.
         result = bus.request(routing_key, params=[cluster_name])
-        return create_response(message['id'], result['result'])
+        return create_jsonrpc_response(message['id'], result['result'])
     except models.ValidationError as error:
         LOGGER.info('Invalid data provided. "{}"'.format(error))
         LOGGER.debug('Data="{}"'.format(message['params']))

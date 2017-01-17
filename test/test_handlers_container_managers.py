@@ -22,7 +22,8 @@ from . import TestCase, expected_error
 
 from commissaire import bus as _bus
 from commissaire.constants import JSONRPC_ERRORS
-from commissaire_http.handlers import container_managers, create_response
+from commissaire_http.handlers import (
+    container_managers, create_jsonrpc_response)
 from commissaire.models import ContainerManagerConfig, ContainerManagerConfigs
 
 # Globals reused in network tests
@@ -57,7 +58,7 @@ class Test_container_managers(TestCase):
         bus.storage.list.return_value = ContainerManagerConfigs.new(
             container_managers=[CONTAINER_MANAGER_CONFIG])
         self.assertEquals(
-            create_response(ID, ['test']),
+            create_jsonrpc_response(ID, ['test']),
             container_managers.list_container_managers(
                 NO_PARAMS_REQUEST, bus))
 
@@ -68,7 +69,7 @@ class Test_container_managers(TestCase):
         bus = mock.MagicMock()
         bus.storage.get.return_value = CONTAINER_MANAGER_CONFIG
         self.assertEquals(
-            create_response(ID, CONTAINER_MANAGER_CONFIG.to_dict()),
+            create_jsonrpc_response(ID, CONTAINER_MANAGER_CONFIG.to_dict()),
             container_managers.get_container_manager(
                 SIMPLE_CONTAINER_MANAGER_CONFIG_REQUEST, bus))
 
@@ -95,7 +96,7 @@ class Test_container_managers(TestCase):
         # Creation response
         bus.storage.save.return_value = CONTAINER_MANAGER_CONFIG
         self.assertEquals(
-            create_response(ID, CONTAINER_MANAGER_CONFIG.to_dict()),
+            create_jsonrpc_response(ID, CONTAINER_MANAGER_CONFIG.to_dict()),
             container_managers.create_container_manager(
                 SIMPLE_CONTAINER_MANAGER_CONFIG_REQUEST, bus))
 
@@ -109,7 +110,7 @@ class Test_container_managers(TestCase):
         # Creation response
         bus.storage.save.return_value = CONTAINER_MANAGER_CONFIG
         self.assertEquals(
-            create_response(ID, CONTAINER_MANAGER_CONFIG.to_dict()),
+            create_jsonrpc_response(ID, CONTAINER_MANAGER_CONFIG.to_dict()),
             container_managers.create_container_manager(
                 SIMPLE_CONTAINER_MANAGER_CONFIG_REQUEST, bus))
 

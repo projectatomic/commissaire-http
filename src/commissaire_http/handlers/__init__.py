@@ -38,15 +38,15 @@ def return_error(message, error, error_code):
     :rtype: dict
     """
     LOGGER.error('Error dealing with: "{}"'.format(message))
-    response = create_response(
+    response = create_jsonrpc_response(
         message['id'], error=error,
         error_code=error_code)
     LOGGER.debug('Returning: {}'.format(response))
     return response
 
 
-def create_response(id, result=None, error=None,
-                    error_code=JSONRPC_ERRORS['INTERNAL_ERROR']):
+def create_jsonrpc_response(id, result=None, error=None,
+                            error_code=JSONRPC_ERRORS['INTERNAL_ERROR']):
     """
     Creates a jsonrpc response based on input.
 
@@ -95,7 +95,7 @@ def hello_world(message, bus):  # pragma: no cover
     # print(bus.request('simple.add', 'add', params=[10, 20]))
     if message['params'].get('name'):
         response_msg['Hello'] = message['params']['name']
-    return create_response(message['id'], response_msg)
+    return create_jsonrpc_response(message['id'], response_msg)
 
 
 def create_world(message, bus):  # pragma: no cover
@@ -110,7 +110,7 @@ def create_world(message, bus):  # pragma: no cover
     """
     try:
         import random
-        return create_response(
+        return create_jsonrpc_response(
             message['id'],
             {
                 'name': message['params'].get('name'),

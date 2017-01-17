@@ -25,7 +25,7 @@ from . import TestCase, expected_error
 from commissaire import constants as C
 from commissaire import bus as _bus
 from commissaire.constants import JSONRPC_ERRORS
-from commissaire_http.handlers import create_response, clusters
+from commissaire_http.handlers import create_jsonrpc_response, clusters
 from commissaire.models import Cluster, Clusters, Hosts, Network, ValidationError
 
 
@@ -77,7 +77,7 @@ class Test_clusters(TestCase):
         bus = mock.MagicMock()
         bus.storage.list.return_value = Clusters.new(clusters=[CLUSTER])
         self.assertEquals(
-            create_response(ID, [CLUSTER.name]),
+            create_jsonrpc_response(ID, [CLUSTER.name]),
             clusters.list_clusters(NO_PARAMS_REQUEST, bus))
 
     def test_get_cluster(self):
@@ -90,7 +90,7 @@ class Test_clusters(TestCase):
         # Hosts requests
         bus.storage.list.return_value = Hosts.new(hosts=[])
         self.assertEquals(
-            create_response(ID, {
+            create_jsonrpc_response(ID, {
                 'name': 'test',
                 'hosts': {'available': 0, 'total': 0, 'unavailable': 0},
                 'network': 'default',
@@ -108,7 +108,7 @@ class Test_clusters(TestCase):
         bus.storage.save.return_value = CLUSTER
 
         self.assertEquals(
-            create_response(ID, CLUSTER.to_dict_safe()),
+            create_jsonrpc_response(ID, CLUSTER.to_dict_safe()),
             clusters.create_cluster(SIMPLE_CLUSTER_REQUEST, bus))
 
     def test_create_cluster_with_invalid_data(self):
@@ -176,7 +176,7 @@ class Test_clusters(TestCase):
         # The delete shouldn't return anything
         bus.storage.delete.return_value = None
         self.assertEquals(
-            create_response(ID, []),
+            create_jsonrpc_response(ID, []),
             clusters.delete_cluster(SIMPLE_CLUSTER_REQUEST, bus))
 
     def test_delete_cluster_that_does_not_exist(self):
@@ -207,7 +207,7 @@ class Test_clusters(TestCase):
         bus.storage.get_cluster.return_value = Cluster.new(
             name='test', hostset=['127.0.0.1'])
         self.assertEquals(
-            create_response(ID, ['127.0.0.1']),
+            create_jsonrpc_response(ID, ['127.0.0.1']),
             clusters.list_cluster_members(SIMPLE_CLUSTER_REQUEST, bus))
 
     def test_update_cluster_members_with_valid_input(self):
@@ -278,7 +278,7 @@ class Test_clusters(TestCase):
         bus.storage.get_cluster.return_value = cluster
 
         self.assertEquals(
-            create_response(ID, ['127.0.0.1']),
+            create_jsonrpc_response(ID, ['127.0.0.1']),
             clusters.check_cluster_member(CHECK_CLUSTER_REQUEST, bus))
 
     def test_check_cluster_member_with_invalid_member(self):
@@ -312,7 +312,7 @@ class Test_clusters(TestCase):
         bus.storage.get_cluster.return_value = cluster
         bus.storage.save.return_value = None
 
-        expected_response = create_response(ID, ['127.0.0.1'])
+        expected_response = create_jsonrpc_response(ID, ['127.0.0.1'])
         self.assertEquals(
             expected_response,
             clusters.add_cluster_member(CHECK_CLUSTER_REQUEST, bus))
@@ -329,5 +329,5 @@ class Test_clusters(TestCase):
         bus.storage.save.return_value = None
 
         self.assertEquals(
-            create_response(ID, []),
+            create_jsonrpc_response(ID, []),
             clusters.delete_cluster_member(CHECK_CLUSTER_REQUEST, bus))

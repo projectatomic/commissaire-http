@@ -19,7 +19,8 @@ ContainerManagerConfig handlers.
 from commissaire import models
 from commissaire import bus as _bus
 from commissaire_http.constants import JSONRPC_ERRORS
-from commissaire_http.handlers import LOGGER, create_response, return_error
+from commissaire_http.handlers import (
+    LOGGER, create_jsonrpc_response, return_error)
 
 
 def _register(router):  # pragma: no cover
@@ -69,7 +70,7 @@ def list_container_managers(message, bus):
     :rtype: dict
     """
     container = bus.storage.list(models.ContainerManagerConfigs)
-    return create_response(
+    return create_jsonrpc_response(
         message['id'], [cmc.name for cmc in container.container_managers])
 
 
@@ -89,7 +90,7 @@ def get_container_manager(message, bus):
         container_manager_cfg = bus.storage.get(
             models.ContainerManagerConfig.new(name=name))
 
-        return create_response(
+        return create_jsonrpc_response(
             message['id'], container_manager_cfg.to_dict_safe())
     except _bus.StorageLookupError as error:
         return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
@@ -121,7 +122,8 @@ def create_container_manager(message, bus):
 
         # If they are the same thing then go ahead and return success
         if saved_cmc.to_dict() == input_cmc.to_dict():
-            return create_response(message['id'], saved_cmc.to_dict_safe())
+            return create_jsonrpc_response(
+                message['id'], saved_cmc.to_dict_safe())
 
         # Otherwise error with a CONFLICT
         return return_error(
@@ -137,7 +139,7 @@ def create_container_manager(message, bus):
     try:
         input_cmc = models.ContainerManagerConfig.new(**message['params'])
         saved_cmc = bus.storage.save(input_cmc)
-        return create_response(message['id'], saved_cmc.to_dict_safe())
+        return create_jsonrpc_response(message['id'], saved_cmc.to_dict_safe())
     except models.ValidationError as error:
         return return_error(message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
 
@@ -158,7 +160,7 @@ def delete_container_manager(message, bus):
         LOGGER.debug('Attempting to delete ContainerManagerConfig "{}"'.format(
             name))
         bus.storage.delete(models.ContainerManagerConfig.new(name=name))
-        return create_response(message['id'], [])
+        return create_jsonrpc_response(message['id'], [])
     except _bus.StorageLookupError as error:
         return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
     except Exception as error:

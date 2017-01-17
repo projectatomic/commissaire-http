@@ -22,35 +22,37 @@ from commissaire_http import handlers
 UID = '123'
 
 
-class Test_create_response(TestCase):
+class Test_create_jsonrpc_response(TestCase):
     """
-    Test for the create_response helper function.
+    Test for the create_jsonrpc_response helper function.
     """
 
-    def test_create_response_without_result_or_error(self):
+    def test_create_jsonrpc_response_without_result_or_error(self):
         """
-        Verify create_response requires a result or error.
+        Verify create_jsonrpc_response requires a result or error.
         """
-        self.assertRaises(TypeError, handlers.create_response, UID)
+        self.assertRaises(TypeError, handlers.create_jsonrpc_response, UID)
 
-    def test_create_response_with_result(self):
+    def test_create_jsonrpc_response_with_result(self):
         """
-        Verify create_response creates the proper result jsonrpc structure.
+        Verify create_jsonrpc_response creates the proper result jsonrpc structure.
         """
-        response = handlers.create_response(UID, result={'test': 'data'})
+        response = handlers.create_jsonrpc_response(
+            UID, result={'test': 'data'})
         self.assertEquals('2.0', response['jsonrpc'])
         self.assertEquals(UID, response['id'])
         self.assertEquals({'test': 'data'}, response['result'])
 
-    def test_create_response_with_error(self):
+    def test_create_jsonrpc_response_with_error(self):
         """
-        Verify create_response creates the proper error jsonrpc structure.
+        Verify create_jsonrpc_response creates the proper error jsonrpc
+        structure.
         """
         for (error, expected_response) in [
             (Exception('test'), 'test'),
             ('test', 'test')
         ]:
-            response = handlers.create_response(UID, error=error)
+            response = handlers.create_jsonrpc_response(UID, error=error)
             self.assertEquals('2.0', response['jsonrpc'])
             self.assertEquals(UID, response['id'])
             print(response)

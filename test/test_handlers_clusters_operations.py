@@ -25,7 +25,7 @@ from commissaire import bus as _bus
 from commissaire import constants as C
 from commissaire.constants import JSONRPC_ERRORS
 from commissaire_http.handlers.clusters import (
-    operations, create_response, return_error)
+    operations, create_jsonrpc_response, return_error)
 from commissaire.models import ClusterDeploy, ClusterUpgrade, ClusterRestart
 
 # Globals reused in host tests
@@ -62,7 +62,7 @@ class Test_deploy_operations(TestCase):
         bus.storage.get.return_value = CLUSTER_DEPLOY
 
         self.assertEquals(
-            create_response(ID, CLUSTER_DEPLOY.to_dict()),
+            create_jsonrpc_response(ID, CLUSTER_DEPLOY.to_dict()),
             operations.get_cluster_deploy(SIMPLE_DEPLOY_REQUEST, bus))
 
     def test_get_cluster_deploy_that_doesnt_exist(self):
@@ -93,11 +93,11 @@ class Test_deploy_operations(TestCase):
         Verify create_cluster_deploy creates a new deploy record.
         """
         bus = mock.MagicMock()
-        bus.request.return_value = create_response(
+        bus.request.return_value = create_jsonrpc_response(
             ID, CLUSTER_DEPLOY.to_dict())
 
         self.assertEquals(
-            create_response(ID, CLUSTER_DEPLOY.to_dict()),
+            create_jsonrpc_response(ID, CLUSTER_DEPLOY.to_dict()),
             operations.create_cluster_deploy(
                 SIMPLE_DEPLOY_REQUEST, bus))
 
@@ -106,7 +106,7 @@ class Test_deploy_operations(TestCase):
         Verify create_cluster_deploy responds with an error when invalid data is given.
         """
         bus = mock.MagicMock()
-        bus.request.return_value = create_response(
+        bus.request.return_value = create_jsonrpc_response(
             ID, BAD_CLUSTER_DEPLOY.to_dict())
 
         self.assertEquals(
@@ -166,7 +166,7 @@ class Test_get_cluster_operation(TestCase):
             bus = mock.MagicMock()
             bus.storage.get.return_value = model_instance
             self.assertEquals(
-                create_response(ID, model_instance.to_dict()),
+                create_jsonrpc_response(ID, model_instance.to_dict()),
                 operations.get_cluster_operation(
                     model_instance.__class__, request, bus))
 
@@ -210,11 +210,11 @@ class Test_get_cluster_operation(TestCase):
                 (CLUSTER_RESTART, SIMPLE_RESTART_REQUEST)]:
 
             bus = mock.MagicMock()
-            bus.request.return_value = create_response(
+            bus.request.return_value = create_jsonrpc_response(
                 ID, model_instance.to_dict())
 
             self.assertEquals(
-                create_response(ID, model_instance.to_dict()),
+                create_jsonrpc_response(ID, model_instance.to_dict()),
                 operations.create_cluster_operation(
                     model_instance.__class__,
                     request, bus, 'phony_routing_key'))
@@ -241,7 +241,7 @@ class Test_get_cluster_operation(TestCase):
         """
         for model_instance in (CLUSTER_UPGRADE, CLUSTER_RESTART):
             bus = mock.MagicMock()
-            bus.request.return_value = create_response(ID, {})
+            bus.request.return_value = create_jsonrpc_response(ID, {})
 
             self.assertEquals(
                 expected_error(ID, JSONRPC_ERRORS['INVALID_REQUEST']),

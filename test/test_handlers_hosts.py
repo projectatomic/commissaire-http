@@ -24,7 +24,7 @@ from . import TestCase, expected_error
 from commissaire import bus as _bus
 from commissaire import constants as C
 from commissaire.constants import JSONRPC_ERRORS
-from commissaire_http.handlers import hosts, create_response, clusters
+from commissaire_http.handlers import hosts, create_jsonrpc_response, clusters
 from commissaire.models import (
     Host, Hosts, HostStatus, Cluster, Clusters, ValidationError)
 
@@ -67,7 +67,7 @@ class Test_hosts(TestCase):
         bus = mock.MagicMock()
         bus.storage.list.return_value = Hosts.new(hosts=[HOST])
         self.assertEquals(
-            create_response(ID, [HOST.to_dict_safe()]),
+            create_jsonrpc_response(ID, [HOST.to_dict_safe()]),
             hosts.list_hosts(NO_PARAMS_REQUEST, bus))
 
     def test_get_host(self):
@@ -77,7 +77,7 @@ class Test_hosts(TestCase):
         bus = mock.MagicMock()
         bus.storage.get_host.return_value = HOST
         self.assertEquals(
-            create_response(ID, HOST.to_dict_safe()),
+            create_jsonrpc_response(ID, HOST.to_dict_safe()),
             hosts.get_host(SIMPLE_HOST_REQUEST, bus))
 
     def test_get_host_that_doesnt_exist(self):
@@ -102,7 +102,7 @@ class Test_hosts(TestCase):
         bus.storage.save.return_value = HOST
 
         self.assertEquals(
-            create_response(ID, HOST.to_dict_safe()),
+            create_jsonrpc_response(ID, HOST.to_dict_safe()),
             hosts.create_host(SIMPLE_HOST_REQUEST, bus))
 
     def test_create_host_without_an_address(self):
@@ -157,7 +157,7 @@ class Test_hosts(TestCase):
         )
 
         self.assertEquals(
-            create_response(ID, HOST.to_dict_safe()),
+            create_jsonrpc_response(ID, HOST.to_dict_safe()),
             hosts.create_host(CLUSTER_HOST_REQUEST, bus))
 
     def test_create_host_with_the_same_existing_host(self):
@@ -171,7 +171,7 @@ class Test_hosts(TestCase):
         bus.storage.save.return_value = HOST
 
         self.assertEquals(
-            create_response(ID, HOST.to_dict_safe()),
+            create_jsonrpc_response(ID, HOST.to_dict_safe()),
             hosts.create_host(SIMPLE_HOST_REQUEST, bus))
 
     def test_create_host_with_existing_host_different_ssh_key(self):
@@ -280,7 +280,8 @@ class Test_hosts(TestCase):
         bus = mock.MagicMock()
         bus.storage.get_host.return_value = HOST
         self.assertEquals(
-            create_response(ID, {'ssh_priv_key': '', 'remote_user': 'root'}),
+            create_jsonrpc_response(
+                ID, {'ssh_priv_key': '', 'remote_user': 'root'}),
             hosts.get_hostcreds(SIMPLE_HOST_REQUEST, bus))
 
     def test_get_hostcreds_that_doesnt_exist(self):
@@ -303,7 +304,7 @@ class Test_hosts(TestCase):
         host_status = HostStatus.new(
             host={'last_check': '', 'status': ''}, type='host_only')
         self.assertEquals(
-            create_response(ID, host_status.to_dict()),
+            create_jsonrpc_response(ID, host_status.to_dict()),
             hosts.get_host_status(SIMPLE_HOST_REQUEST, bus))
 
     def test_get_host_status_that_doesnt_exist(self):

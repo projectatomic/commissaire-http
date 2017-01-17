@@ -17,7 +17,7 @@ import os
 
 from unittest import TestCase, mock
 
-from commissaire_http.handlers import create_response
+from commissaire_http.handlers import create_jsonrpc_response
 
 
 def create_environ(path='/', headers={}):
@@ -63,7 +63,8 @@ def expected_error(message_id, code):
     :returns: An error structure for use with tests.
     :rtpe: dict
     """
-    expected = create_response(message_id, error='error', error_code=code)
+    expected = create_jsonrpc_response(
+        message_id, error='error', error_code=code)
     expected['error'] = mock.ANY
     return expected
 

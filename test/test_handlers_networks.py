@@ -22,7 +22,7 @@ from . import TestCase, expected_error
 
 from commissaire import bus as _bus
 from commissaire.constants import JSONRPC_ERRORS
-from commissaire_http.handlers import networks, create_response
+from commissaire_http.handlers import networks, create_jsonrpc_response
 from commissaire.models import Network, Networks, ValidationError
 
 # Globals reused in network tests
@@ -56,7 +56,7 @@ class Test_networks(TestCase):
         bus = mock.MagicMock()
         bus.storage.list.return_value = Networks.new(networks=[NETWORK])
         self.assertEquals(
-            create_response(ID, ['test']),
+            create_jsonrpc_response(ID, ['test']),
             networks.list_networks(NO_PARAMS_REQUEST, bus))
 
     def test_get_network(self):
@@ -66,7 +66,7 @@ class Test_networks(TestCase):
         bus = mock.MagicMock()
         bus.storage.get_network.return_value = NETWORK
         self.assertEquals(
-            create_response(ID, NETWORK.to_dict()),
+            create_jsonrpc_response(ID, NETWORK.to_dict()),
             networks.get_network(SIMPLE_NETWORK_REQUEST, bus))
 
     def test_create_network(self):
@@ -79,7 +79,7 @@ class Test_networks(TestCase):
         # Creation response
         bus.storage.save.return_value = NETWORK
         self.assertEquals(
-            create_response(ID, NETWORK.to_dict()),
+            create_jsonrpc_response(ID, NETWORK.to_dict()),
             networks.create_network(SIMPLE_NETWORK_REQUEST, bus))
 
     def test_create_network_idempotent(self):
@@ -92,7 +92,7 @@ class Test_networks(TestCase):
         # Creation response
         bus.storage.save.return_value = NETWORK
         self.assertEquals(
-            create_response(ID, NETWORK.to_dict()),
+            create_jsonrpc_response(ID, NETWORK.to_dict()),
             networks.create_network(SIMPLE_NETWORK_REQUEST, bus))
 
     def test_create_network_conflict(self):

@@ -21,7 +21,8 @@ from datetime import datetime as _dt
 from commissaire import bus as _bus
 from commissaire import models
 from commissaire_http.constants import JSONRPC_ERRORS
-from commissaire_http.handlers import LOGGER, create_response, return_error
+from commissaire_http.handlers import (
+    LOGGER, create_jsonrpc_response, return_error)
 
 
 def _register(router):
@@ -83,7 +84,7 @@ def list_hosts(message, bus):
     :rtype: dict
     """
     container = bus.storage.list(models.Hosts)
-    return create_response(
+    return create_jsonrpc_response(
         message['id'],
         [host.to_dict_safe() for host in container.hosts])
 
@@ -102,7 +103,7 @@ def get_host(message, bus):
     try:
         address = message['params']['address']
         host = bus.storage.get_host(address)
-        return create_response(message['id'], host.to_dict_safe())
+        return create_jsonrpc_response(message['id'], host.to_dict_safe())
     except _bus.RemoteProcedureCallError as error:
         LOGGER.debug('Client requested a non-existant host: "{}"'.format(
             message['params']['address']))
@@ -157,7 +158,7 @@ def create_host(message, bus):
                 message, 'Host not in cluster', JSONRPC_ERRORS['CONFLICT'])
 
         # Return out now. No more processing needed.
-        return create_response(message['id'], host.to_dict_safe())
+        return create_jsonrpc_response(message['id'], host.to_dict_safe())
 
     except _bus.RemoteProcedureCallError as error:
         LOGGER.debug('Brand new host "{}" being created.'.format(
@@ -185,7 +186,7 @@ def create_host(message, bus):
             last_check=_dt.utcnow().isoformat())
         bus.producer.publish(watcher_record.to_json(), 'jobs.watcher')
 
-        return create_response(message['id'], host.to_dict_safe())
+        return create_jsonrpc_response(message['id'], host.to_dict_safe())
     except models.ValidationError as error:
         return return_error(message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
 
@@ -222,7 +223,7 @@ def delete_host(message, bus):
         except _bus.RemoteProcedureCallError as error:
             LOGGER.info('{} not part of a cluster.'.format(address))
 
-        return create_response(message['id'], [])
+        return create_jsonrpc_response(message['id'], [])
     except _bus.RemoteProcedureCallError as error:
         return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
     except Exception as error:
@@ -249,7 +250,7 @@ def get_hostcreds(message, bus):
             'remote_user': host.remote_user,
             'ssh_priv_key': host.ssh_priv_key
         }
-        return create_response(message['id'], creds)
+        return create_jsonrpc_response(message['id'], creds)
     except _bus.RemoteProcedureCallError as error:
         LOGGER.debug('Client requested a non-existant host: "{}"'.format(
             address))
@@ -281,7 +282,7 @@ def get_host_status(message, bus):
         LOGGER.debug('Status for host "{0}": "{1}"'.format(
             host.address, status.to_json_safe()))
 
-        return create_response(message['id'], status.to_dict_safe())
+        return create_jsonrpc_response(message['id'], status.to_dict_safe())
     except _bus.RemoteProcedureCallError as error:
         return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
     except Exception as error:
