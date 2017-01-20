@@ -302,10 +302,7 @@ def check_cluster_member(message, bus):
                 error='The requested host is not part of the cluster.',
                 error_code=JSONRPC_ERRORS['NOT_FOUND'])
     except Exception as error:
-        return create_response(
-            message['id'],
-            error=error,
-            error_code=JSONRPC_ERRORS['INTERNAL_ERROR'])
+        return return_error(message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
 
 
 def add_cluster_member(message, bus):
@@ -339,10 +336,7 @@ def add_cluster_member(message, bus):
         # Return back the host in a list
         return create_response(message['id'], [host])
     except Exception as error:
-        return create_response(
-            message['id'],
-            error=error,
-            error_code=JSONRPC_ERRORS['INTERNAL_ERROR'])
+        return return_error(message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
 
 
 def delete_cluster_member(message, bus):
@@ -370,7 +364,4 @@ def delete_cluster_member(message, bus):
             bus.storage.save(cluster)
         return create_response(message['id'], [])
     except Exception as error:
-        return create_response(
-            message['id'],
-            error=error,
-            error_code=JSONRPC_ERRORS['NOT_FOUND'])
+        return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
