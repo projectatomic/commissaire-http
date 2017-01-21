@@ -59,16 +59,16 @@ class Test_create_jsonrpc_response(TestCase):
             self.assertEquals(expected_response, response['error']['message'])
 
 
-class Test_return_error(TestCase):
+class Test_create_jsonrpc_error(TestCase):
     """
-    Test for the return_error helper function.
+    Test for the create_jsonrpc_error helper function.
     """
 
-    def test_return_error(self):
+    def test_create_jsonrpc_error(self):
         """
-        Ensure return_error returns a proper error structure.
+        Ensure create_jsonrpc_error returns a proper error structure.
         """
-        result = handlers.return_error({'id': UID}, Exception('test'), 1)
+        result = handlers.create_jsonrpc_error({'id': UID}, Exception('test'), 1)
         self.assertEquals(1, result['error']['code'])
         self.assertEquals('test', result['error']['message'])
         self.assertEquals(str(Exception), result['error']['data']['exception'])

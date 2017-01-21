@@ -22,7 +22,7 @@ from commissaire import bus as _bus
 from commissaire_http.constants import JSONRPC_ERRORS
 
 from commissaire_http.handlers import (
-    LOGGER, create_jsonrpc_response, return_error)
+    LOGGER, create_jsonrpc_response, create_jsonrpc_error)
 
 
 def _register(router):
@@ -182,7 +182,8 @@ def create_cluster(message, bus):
         cluster = bus.storage.save(models.Cluster.new(**message['params']))
         return create_jsonrpc_response(message['id'], cluster.to_dict_safe())
     except models.ValidationError as error:
-        return return_error(message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
+        return create_jsonrpc_error(
+            message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
 
 
 def delete_cluster(message, bus):
@@ -202,11 +203,13 @@ def delete_cluster(message, bus):
         bus.storage.delete(models.Cluster.new(name=name))
         return create_jsonrpc_response(message['id'], [])
     except _bus.StorageLookupError as error:
-        return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
+        return create_jsonrpc_error(
+            message, error, JSONRPC_ERRORS['NOT_FOUND'])
     except Exception as error:
         LOGGER.debug('Error deleting cluster: {}: {}'.format(
             type(error), error))
-        return return_error(message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
+        return create_jsonrpc_error(
+            message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
 
 
 def list_cluster_members(message, bus):
@@ -228,11 +231,13 @@ def list_cluster_members(message, bus):
         return create_jsonrpc_response(
             message['id'], result=cluster.hostset)
     except _bus.StorageLookupError as error:
-        return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
+        return create_jsonrpc_error(
+            message, error, JSONRPC_ERRORS['NOT_FOUND'])
     except Exception as error:
         LOGGER.debug('Error listing cluster: {}: {}'.format(
             type(error), error))
-        return return_error(message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
+        return create_jsonrpc_error(
+            message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
 
 
 def update_cluster_members(message, bus):
@@ -252,18 +257,20 @@ def update_cluster_members(message, bus):
         LOGGER.debug('old_hosts="{}", new_hosts="{}"'.format(
             old_hosts, new_hosts))
     except Exception as error:
-        return return_error(message, error, JSONRPC_ERRORS['BAD_REQUEST'])
+        return create_jsonrpc_error(
+            message, error, JSONRPC_ERRORS['BAD_REQUEST'])
 
     try:
         name = message['params']['name']
         cluster = bus.storage.get_cluster(name)
     except _bus.StorageLookupError as error:
-        return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
+        return create_jsonrpc_error(
+            message, error, JSONRPC_ERRORS['NOT_FOUND'])
 
     if old_hosts != set(cluster.hostset):
         msg = 'Conflict setting hosts for cluster {0}'.format(name)
         LOGGER.error(msg)
-        return return_error(message, msg, JSONRPC_ERRORS['CONFLICT'])
+        return create_jsonrpc_error(message, msg, JSONRPC_ERRORS['CONFLICT'])
 
     # FIXME: Need input validation.  For each new host,
     #        - Does the host exist at /commissaire/hosts/{IP}?
@@ -303,7 +310,8 @@ def check_cluster_member(message, bus):
                 error='The requested host is not part of the cluster.',
                 error_code=JSONRPC_ERRORS['NOT_FOUND'])
     except Exception as error:
-        return return_error(message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
+        return create_jsonrpc_error(
+            message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
 
 
 def add_cluster_member(message, bus):
@@ -337,7 +345,8 @@ def add_cluster_member(message, bus):
         # Return back the host in a list
         return create_jsonrpc_response(message['id'], [host])
     except Exception as error:
-        return return_error(message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
+        return create_jsonrpc_error(
+            message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
 
 
 def delete_cluster_member(message, bus):
@@ -365,4 +374,5 @@ def delete_cluster_member(message, bus):
             bus.storage.save(cluster)
         return create_jsonrpc_response(message['id'], [])
     except Exception as error:
-        return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
+        return create_jsonrpc_error(
+            message, error, JSONRPC_ERRORS['NOT_FOUND'])

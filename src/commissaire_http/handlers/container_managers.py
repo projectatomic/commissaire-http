@@ -20,7 +20,7 @@ from commissaire import models
 from commissaire import bus as _bus
 from commissaire_http.constants import JSONRPC_ERRORS
 from commissaire_http.handlers import (
-    LOGGER, create_jsonrpc_response, return_error)
+    LOGGER, create_jsonrpc_response, create_jsonrpc_error)
 
 
 def _register(router):  # pragma: no cover
@@ -93,9 +93,11 @@ def get_container_manager(message, bus):
         return create_jsonrpc_response(
             message['id'], container_manager_cfg.to_dict_safe())
     except _bus.StorageLookupError as error:
-        return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
+        return create_jsonrpc_error(
+            message, error, JSONRPC_ERRORS['NOT_FOUND'])
     except Exception as error:
-        return return_error(message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
+        return create_jsonrpc_error(
+            message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
 
 
 def create_container_manager(message, bus):
@@ -126,7 +128,7 @@ def create_container_manager(message, bus):
                 message['id'], saved_cmc.to_dict_safe())
 
         # Otherwise error with a CONFLICT
-        return return_error(
+        return create_jsonrpc_error(
             message,
             'A ContainerManager with that name already exists.',
             JSONRPC_ERRORS['CONFLICT'])
@@ -141,7 +143,8 @@ def create_container_manager(message, bus):
         saved_cmc = bus.storage.save(input_cmc)
         return create_jsonrpc_response(message['id'], saved_cmc.to_dict_safe())
     except models.ValidationError as error:
-        return return_error(message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
+        return create_jsonrpc_error(
+            message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
 
 
 def delete_container_manager(message, bus):
@@ -162,8 +165,10 @@ def delete_container_manager(message, bus):
         bus.storage.delete(models.ContainerManagerConfig.new(name=name))
         return create_jsonrpc_response(message['id'], [])
     except _bus.StorageLookupError as error:
-        return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
+        return create_jsonrpc_error(
+            message, error, JSONRPC_ERRORS['NOT_FOUND'])
     except Exception as error:
         LOGGER.debug('Error deleting ContainerManagerConfig: {}: {}'.format(
             type(error), error))
-        return return_error(message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
+        return create_jsonrpc_error(
+            message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])

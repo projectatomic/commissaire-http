@@ -25,7 +25,7 @@ from commissaire import bus as _bus
 from commissaire import constants as C
 from commissaire.constants import JSONRPC_ERRORS
 from commissaire_http.handlers.clusters import (
-    operations, create_jsonrpc_response, return_error)
+    operations, create_jsonrpc_response, create_jsonrpc_error)
 from commissaire.models import ClusterDeploy, ClusterUpgrade, ClusterRestart
 
 # Globals reused in host tests

@@ -23,7 +23,7 @@ from commissaire import bus as _bus
 from commissaire_http.constants import JSONRPC_ERRORS
 
 from commissaire_http.handlers import (
-    LOGGER, create_jsonrpc_response, return_error)
+    LOGGER, create_jsonrpc_response, create_jsonrpc_error)
 
 
 def _register(router):
@@ -94,11 +94,14 @@ def get_cluster_deploy(message, bus):
     except models.ValidationError as error:
         LOGGER.info('Invalid data retrieved. "{}"'.format(error))
         LOGGER.debug('Data="{}"'.format(message['params']))
-        return return_error(message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
+        return create_jsonrpc_error(
+            message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
     except _bus.StorageLookupError as error:
-        return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
+        return create_jsonrpc_error(
+            message, error, JSONRPC_ERRORS['NOT_FOUND'])
     except Exception as error:
-        return return_error(message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
+        return create_jsonrpc_error(
+            message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
 
 
 def create_cluster_deploy(message, bus):
@@ -126,11 +129,13 @@ def create_cluster_deploy(message, bus):
     except models.ValidationError as error:
         LOGGER.info('Invalid data provided. "{}"'.format(error))
         LOGGER.debug('Data="{}"'.format(message['params']))
-        return return_error(message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
+        return create_jsonrpc_error(
+            message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
     except Exception as error:
         LOGGER.debug('Error creating ClusterDeploy: {}: {}'.format(
             type(error), error))
-        return return_error(message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
+        return create_jsonrpc_error(
+            message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
 
 
 def get_cluster_upgrade(message, bus):  # pragma: no cover
@@ -213,13 +218,16 @@ def get_cluster_operation(model_cls, message, bus):
     except models.ValidationError as error:
         LOGGER.info('Invalid data retrieved. "{}"'.format(error))
         LOGGER.debug('Data="{}"'.format(message['params']))
-        return return_error(message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
+        return create_jsonrpc_error(
+            message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
     except _bus.StorageLookupError as error:
-        return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
+        return create_jsonrpc_error(
+            message, error, JSONRPC_ERRORS['NOT_FOUND'])
     except Exception as error:
         LOGGER.debug('Error getting {}: {}: {}'.format(
             model_cls.__name__, type(error), error))
-        return return_error(message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
+        return create_jsonrpc_error(
+            message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
 
 
 def create_cluster_operation(model_cls, message, bus, routing_key):
@@ -246,7 +254,8 @@ def create_cluster_operation(model_cls, message, bus, routing_key):
     except:
         error_msg = 'Cluster "{}" does not exist.'.format(cluster_name)
         LOGGER.debug(error_msg)
-        return return_error(message, error_msg, JSONRPC_ERRORS['NOT_FOUND'])
+        return create_jsonrpc_error(
+            message, error_msg, JSONRPC_ERRORS['NOT_FOUND'])
 
     try:
         model = model_cls.new(
@@ -260,8 +269,10 @@ def create_cluster_operation(model_cls, message, bus, routing_key):
     except models.ValidationError as error:
         LOGGER.info('Invalid data provided. "{}"'.format(error))
         LOGGER.debug('Data="{}"'.format(message['params']))
-        return return_error(message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
+        return create_jsonrpc_error(
+            message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
     except Exception as error:
         LOGGER.debug('Error creating {}: {}: {}'.format(
             model_cls.__name__, type(error), error))
-        return return_error(message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
+        return create_jsonrpc_error(
+            message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])

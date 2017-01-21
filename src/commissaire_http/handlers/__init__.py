@@ -24,7 +24,7 @@ from commissaire_http.constants import JSONRPC_ERRORS
 LOGGER = logging.getLogger('Handlers')
 
 
-def return_error(message, error, error_code):
+def create_jsonrpc_error(message, error, error_code):
     """
     Shortcut for logging and returning an error.
 

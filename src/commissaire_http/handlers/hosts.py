@@ -22,7 +22,7 @@ from commissaire import bus as _bus
 from commissaire import models
 from commissaire_http.constants import JSONRPC_ERRORS
 from commissaire_http.handlers import (
-    LOGGER, create_jsonrpc_response, return_error)
+    LOGGER, create_jsonrpc_response, create_jsonrpc_error)
 
 
 def _register(router):
@@ -107,7 +107,8 @@ def get_host(message, bus):
     except _bus.RemoteProcedureCallError as error:
         LOGGER.debug('Client requested a non-existant host: "{}"'.format(
             message['params']['address']))
-        return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
+        return create_jsonrpc_error(
+            message, error, JSONRPC_ERRORS['NOT_FOUND'])
 
 
 def create_host(message, bus):
@@ -125,7 +126,7 @@ def create_host(message, bus):
     try:
         address = message['params']['address']
     except KeyError:
-        return return_error(
+        return create_jsonrpc_error(
             message, '"address" must be given in the url or in the PUT body',
             JSONRPC_ERRORS['INVALID_PARAMETERS'])
 
@@ -135,7 +136,7 @@ def create_host(message, bus):
     if cluster_name:
         cluster = _does_cluster_exist(bus, cluster_name)
         if not cluster:
-            return return_error(
+            return create_jsonrpc_error(
                 message, 'Cluster does not exist',
                 JSONRPC_ERRORS['INVALID_PARAMETERS'])
         else:
@@ -147,14 +148,14 @@ def create_host(message, bus):
 
         # Verify the keys match
         if host.ssh_priv_key != message['params'].get('ssh_priv_key', ''):
-            return return_error(
+            return create_jsonrpc_error(
                 message, 'Host already exists', JSONRPC_ERRORS['CONFLICT'])
 
         # Verify the host is in the cluster if it is expected
         if cluster_name and address not in cluster.hostset:
             LOGGER.debug('Host "{}" is not in cluster "{}"'.format(
                 address, cluster_name))
-            return return_error(
+            return create_jsonrpc_error(
                 message, 'Host not in cluster', JSONRPC_ERRORS['CONFLICT'])
 
         # Return out now. No more processing needed.
@@ -188,7 +189,8 @@ def create_host(message, bus):
 
         return create_jsonrpc_response(message['id'], host.to_dict_safe())
     except models.ValidationError as error:
-        return return_error(message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
+        return create_jsonrpc_error(
+            message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
 
 
 def delete_host(message, bus):
@@ -225,11 +227,13 @@ def delete_host(message, bus):
 
         return create_jsonrpc_response(message['id'], [])
     except _bus.RemoteProcedureCallError as error:
-        return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
+        return create_jsonrpc_error(
+            message, error, JSONRPC_ERRORS['NOT_FOUND'])
     except Exception as error:
         LOGGER.debug('Error deleting host: {}: {}'.format(
             type(error), error))
-        return return_error(message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
+        return create_jsonrpc_error(
+            message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
 
 
 def get_hostcreds(message, bus):
@@ -254,7 +258,8 @@ def get_hostcreds(message, bus):
     except _bus.RemoteProcedureCallError as error:
         LOGGER.debug('Client requested a non-existant host: "{}"'.format(
             address))
-        return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
+        return create_jsonrpc_error(
+            message, error, JSONRPC_ERRORS['NOT_FOUND'])
 
 
 def get_host_status(message, bus):
@@ -284,12 +289,13 @@ def get_host_status(message, bus):
 
         return create_jsonrpc_response(message['id'], status.to_dict_safe())
     except _bus.RemoteProcedureCallError as error:
-        return return_error(message, error, JSONRPC_ERRORS['NOT_FOUND'])
+        return create_jsonrpc_error(
+            message, error, JSONRPC_ERRORS['NOT_FOUND'])
     except Exception as error:
         LOGGER.debug(
             'Host Status exception caught for {0}: {1}:{2}'.format(
                 address, type(error), error))
-        return return_error(
+        return create_jsonrpc_error(
             message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
 
 
