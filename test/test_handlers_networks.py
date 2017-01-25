@@ -57,7 +57,7 @@ class Test_networks(TestCase):
         bus.storage.list.return_value = Networks.new(networks=[NETWORK])
         self.assertEquals(
             create_jsonrpc_response(ID, ['test']),
-            networks.list_networks(NO_PARAMS_REQUEST, bus))
+            networks.list_networks.handler(NO_PARAMS_REQUEST, bus))
 
     def test_get_network(self):
         """
@@ -67,7 +67,7 @@ class Test_networks(TestCase):
         bus.storage.get_network.return_value = NETWORK
         self.assertEquals(
             create_jsonrpc_response(ID, NETWORK.to_dict()),
-            networks.get_network(SIMPLE_NETWORK_REQUEST, bus))
+            networks.get_network.handler(SIMPLE_NETWORK_REQUEST, bus))
 
     def test_create_network(self):
         """
@@ -80,7 +80,7 @@ class Test_networks(TestCase):
         bus.storage.save.return_value = NETWORK
         self.assertEquals(
             create_jsonrpc_response(ID, NETWORK.to_dict()),
-            networks.create_network(SIMPLE_NETWORK_REQUEST, bus))
+            networks.create_network.handler(SIMPLE_NETWORK_REQUEST, bus))
 
     def test_create_network_idempotent(self):
         """
@@ -93,7 +93,7 @@ class Test_networks(TestCase):
         bus.storage.save.return_value = NETWORK
         self.assertEquals(
             create_jsonrpc_response(ID, NETWORK.to_dict()),
-            networks.create_network(SIMPLE_NETWORK_REQUEST, bus))
+            networks.create_network.handler(SIMPLE_NETWORK_REQUEST, bus))
 
     def test_create_network_conflict(self):
         """
@@ -104,7 +104,7 @@ class Test_networks(TestCase):
             name=NETWORK.name, options={'test': 'test'})
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['CONFLICT']),
-            networks.create_network(SIMPLE_NETWORK_REQUEST, bus))
+            networks.create_network.handler(SIMPLE_NETWORK_REQUEST, bus))
 
     def test_delete_network(self):
         """
@@ -118,7 +118,7 @@ class Test_networks(TestCase):
                 'result': [],
                 'id': '123',
             },
-            networks.delete_network(SIMPLE_NETWORK_REQUEST, bus))
+            networks.delete_network.handler(SIMPLE_NETWORK_REQUEST, bus))
 
     def test_delete_network_not_found_on_missing_key(self):
         """
@@ -129,7 +129,7 @@ class Test_networks(TestCase):
 
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['NOT_FOUND']),
-            networks.delete_network(SIMPLE_NETWORK_REQUEST, bus))
+            networks.delete_network.handler(SIMPLE_NETWORK_REQUEST, bus))
 
     def test_delete_network_internal_error_on_exception(self):
         """
@@ -142,4 +142,4 @@ class Test_networks(TestCase):
 
             self.assertEquals(
                 expected_error(ID, JSONRPC_ERRORS['INTERNAL_ERROR']),
-                networks.delete_network(SIMPLE_NETWORK_REQUEST, bus))
+                networks.delete_network.handler(SIMPLE_NETWORK_REQUEST, bus))

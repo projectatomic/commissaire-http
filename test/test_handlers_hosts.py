@@ -68,7 +68,7 @@ class Test_hosts(TestCase):
         bus.storage.list.return_value = Hosts.new(hosts=[HOST])
         self.assertEquals(
             create_jsonrpc_response(ID, [HOST.to_dict_safe()]),
-            hosts.list_hosts(NO_PARAMS_REQUEST, bus))
+            hosts.list_hosts.handler(NO_PARAMS_REQUEST, bus))
 
     def test_get_host(self):
         """
@@ -78,7 +78,7 @@ class Test_hosts(TestCase):
         bus.storage.get_host.return_value = HOST
         self.assertEquals(
             create_jsonrpc_response(ID, HOST.to_dict_safe()),
-            hosts.get_host(SIMPLE_HOST_REQUEST, bus))
+            hosts.get_host.handler(SIMPLE_HOST_REQUEST, bus))
 
     def test_get_host_that_doesnt_exist(self):
         """
@@ -89,7 +89,7 @@ class Test_hosts(TestCase):
 
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['NOT_FOUND']),
-            hosts.get_host(SIMPLE_HOST_REQUEST, bus))
+            hosts.get_host.handler(SIMPLE_HOST_REQUEST, bus))
 
     def test_create_host(self):
         """
@@ -103,7 +103,7 @@ class Test_hosts(TestCase):
 
         self.assertEquals(
             create_jsonrpc_response(ID, HOST.to_dict_safe()),
-            hosts.create_host(SIMPLE_HOST_REQUEST, bus))
+            hosts.create_host.handler(SIMPLE_HOST_REQUEST, bus))
 
     def test_create_host_without_an_address(self):
         """
@@ -120,7 +120,7 @@ class Test_hosts(TestCase):
 
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['INVALID_PARAMETERS']),
-            hosts.create_host(addressless, bus))
+            hosts.create_host.handler(addressless, bus))
 
 
     def test_create_host_with_invalid_cluster(self):
@@ -137,7 +137,7 @@ class Test_hosts(TestCase):
 
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['INVALID_PARAMETERS']),
-            hosts.create_host(CLUSTER_HOST_REQUEST, bus))
+            hosts.create_host.handler(CLUSTER_HOST_REQUEST, bus))
 
     def test_create_host_with_cluster(self):
         """
@@ -158,7 +158,7 @@ class Test_hosts(TestCase):
 
         self.assertEquals(
             create_jsonrpc_response(ID, HOST.to_dict_safe()),
-            hosts.create_host(CLUSTER_HOST_REQUEST, bus))
+            hosts.create_host.handler(CLUSTER_HOST_REQUEST, bus))
 
     def test_create_host_with_the_same_existing_host(self):
         """
@@ -172,7 +172,7 @@ class Test_hosts(TestCase):
 
         self.assertEquals(
             create_jsonrpc_response(ID, HOST.to_dict_safe()),
-            hosts.create_host(SIMPLE_HOST_REQUEST, bus))
+            hosts.create_host.handler(SIMPLE_HOST_REQUEST, bus))
 
     def test_create_host_with_existing_host_different_ssh_key(self):
         """
@@ -186,7 +186,7 @@ class Test_hosts(TestCase):
 
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['CONFLICT']),
-            hosts.create_host(SIMPLE_HOST_REQUEST, bus))
+            hosts.create_host.handler(SIMPLE_HOST_REQUEST, bus))
 
     def test_create_host_with_existing_host_different_cluster_memebership(self):
         """
@@ -203,7 +203,7 @@ class Test_hosts(TestCase):
 
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['CONFLICT']),
-            hosts.create_host(CLUSTER_HOST_REQUEST, bus))
+            hosts.create_host.handler(CLUSTER_HOST_REQUEST, bus))
 
     def test_delete_host(self):
         """
@@ -220,7 +220,7 @@ class Test_hosts(TestCase):
                 'result': [],
                 'id': '123',
             },
-            hosts.delete_host(SIMPLE_HOST_REQUEST, bus))
+            hosts.delete_host.handler(SIMPLE_HOST_REQUEST, bus))
 
     def test_delete_host_thats_in_a_cluster(self):
         """
@@ -240,7 +240,7 @@ class Test_hosts(TestCase):
                 'result': [],
                 'id': '123',
             },
-            hosts.delete_host(SIMPLE_HOST_REQUEST, bus))
+            hosts.delete_host.handler(SIMPLE_HOST_REQUEST, bus))
 
         # Verify we had a host delete_host
         bus.storage.delete.assert_called_with(mock.ANY)
@@ -258,7 +258,7 @@ class Test_hosts(TestCase):
 
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['NOT_FOUND']),
-            hosts.delete_host(SIMPLE_HOST_REQUEST, bus))
+            hosts.delete_host.handler(SIMPLE_HOST_REQUEST, bus))
 
     def test_delete_host_internal_error_on_exception(self):
         """
@@ -271,7 +271,7 @@ class Test_hosts(TestCase):
 
             self.assertEquals(
                 expected_error(ID, JSONRPC_ERRORS['INTERNAL_ERROR']),
-                hosts.delete_host(SIMPLE_HOST_REQUEST, bus))
+                hosts.delete_host.handler(SIMPLE_HOST_REQUEST, bus))
 
     def test_get_host_creds(self):
         """
@@ -282,7 +282,7 @@ class Test_hosts(TestCase):
         self.assertEquals(
             create_jsonrpc_response(
                 ID, {'ssh_priv_key': '', 'remote_user': 'root'}),
-            hosts.get_hostcreds(SIMPLE_HOST_REQUEST, bus))
+            hosts.get_hostcreds.handler(SIMPLE_HOST_REQUEST, bus))
 
     def test_get_hostcreds_that_doesnt_exist(self):
         """
@@ -293,7 +293,7 @@ class Test_hosts(TestCase):
 
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['NOT_FOUND']),
-            hosts.get_hostcreds(SIMPLE_HOST_REQUEST, bus))
+            hosts.get_hostcreds.handler(SIMPLE_HOST_REQUEST, bus))
 
     def test_get_host_status(self):
         """
@@ -305,7 +305,7 @@ class Test_hosts(TestCase):
             host={'last_check': '', 'status': ''}, type='host_only')
         self.assertEquals(
             create_jsonrpc_response(ID, host_status.to_dict()),
-            hosts.get_host_status(SIMPLE_HOST_REQUEST, bus))
+            hosts.get_host_status.handler(SIMPLE_HOST_REQUEST, bus))
 
     def test_get_host_status_that_doesnt_exist(self):
         """
@@ -316,4 +316,4 @@ class Test_hosts(TestCase):
 
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['NOT_FOUND']),
-            hosts.get_host_status(SIMPLE_HOST_REQUEST, bus))
+            hosts.get_host_status.handler(SIMPLE_HOST_REQUEST, bus))

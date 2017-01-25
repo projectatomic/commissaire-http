@@ -20,7 +20,7 @@ from commissaire import models
 from commissaire import bus as _bus
 from commissaire_http.constants import JSONRPC_ERRORS
 from commissaire_http.handlers import (
-    LOGGER, create_jsonrpc_response, create_jsonrpc_error)
+    LOGGER, JSONRPC_Handler, create_jsonrpc_response, create_jsonrpc_error)
 
 
 def _register(router):  # pragma: no cover
@@ -58,6 +58,7 @@ def _register(router):  # pragma: no cover
     return router
 
 
+@JSONRPC_Handler
 def list_container_managers(message, bus):
     """
     Lists all ContainerManagerConfigs.
@@ -74,6 +75,7 @@ def list_container_managers(message, bus):
         message['id'], [cmc.name for cmc in container.container_managers])
 
 
+@JSONRPC_Handler
 def get_container_manager(message, bus):
     """
     Gets a specific ContainerManagerConfig.
@@ -100,6 +102,7 @@ def get_container_manager(message, bus):
             message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
 
 
+@JSONRPC_Handler
 def create_container_manager(message, bus):
     """
     Creates a new ContainerManagerConfig.
@@ -147,6 +150,7 @@ def create_container_manager(message, bus):
             message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
 
 
+@JSONRPC_Handler
 def delete_container_manager(message, bus):
     """
     Deletes an exisiting ContainerManagerConfig.

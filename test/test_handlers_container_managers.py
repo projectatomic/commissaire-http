@@ -59,7 +59,7 @@ class Test_container_managers(TestCase):
             container_managers=[CONTAINER_MANAGER_CONFIG])
         self.assertEquals(
             create_jsonrpc_response(ID, ['test']),
-            container_managers.list_container_managers(
+            container_managers.list_container_managers.handler(
                 NO_PARAMS_REQUEST, bus))
 
     def test_get_container_manager(self):
@@ -70,7 +70,7 @@ class Test_container_managers(TestCase):
         bus.storage.get.return_value = CONTAINER_MANAGER_CONFIG
         self.assertEquals(
             create_jsonrpc_response(ID, CONTAINER_MANAGER_CONFIG.to_dict()),
-            container_managers.get_container_manager(
+            container_managers.get_container_manager.handler(
                 SIMPLE_CONTAINER_MANAGER_CONFIG_REQUEST, bus))
 
     def test_get_missing_container_manager(self):
@@ -81,7 +81,7 @@ class Test_container_managers(TestCase):
         bus.storage.get.side_effect = _bus.RemoteProcedureCallError('test')
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['NOT_FOUND']),
-            container_managers.get_container_manager(
+            container_managers.get_container_manager.handler(
                 SIMPLE_CONTAINER_MANAGER_CONFIG_REQUEST, bus))
 
 
@@ -97,7 +97,7 @@ class Test_container_managers(TestCase):
         bus.storage.save.return_value = CONTAINER_MANAGER_CONFIG
         self.assertEquals(
             create_jsonrpc_response(ID, CONTAINER_MANAGER_CONFIG.to_dict()),
-            container_managers.create_container_manager(
+            container_managers.create_container_manager.handler(
                 SIMPLE_CONTAINER_MANAGER_CONFIG_REQUEST, bus))
 
     def test_create_container_manager_idempotent(self):
@@ -111,7 +111,7 @@ class Test_container_managers(TestCase):
         bus.storage.save.return_value = CONTAINER_MANAGER_CONFIG
         self.assertEquals(
             create_jsonrpc_response(ID, CONTAINER_MANAGER_CONFIG.to_dict()),
-            container_managers.create_container_manager(
+            container_managers.create_container_manager.handler(
                 SIMPLE_CONTAINER_MANAGER_CONFIG_REQUEST, bus))
 
     def test_create_container_manager_conflict(self):
@@ -125,7 +125,7 @@ class Test_container_managers(TestCase):
         )
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['CONFLICT']),
-            container_managers.create_container_manager(
+            container_managers.create_container_manager.handler(
                 SIMPLE_CONTAINER_MANAGER_CONFIG_REQUEST, bus))
 
     def test_delete_container_manager(self):
@@ -140,7 +140,7 @@ class Test_container_managers(TestCase):
                 'result': [],
                 'id': '123',
             },
-            container_managers.delete_container_manager(
+            container_managers.delete_container_manager.handler(
                 SIMPLE_CONTAINER_MANAGER_CONFIG_REQUEST, bus))
 
     def test_delete_container_manager_not_found_on_missing_key(self):
@@ -152,7 +152,7 @@ class Test_container_managers(TestCase):
 
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['NOT_FOUND']),
-            container_managers.delete_container_manager(
+            container_managers.delete_container_manager.handler(
                 SIMPLE_CONTAINER_MANAGER_CONFIG_REQUEST, bus))
 
     def test_delete_container_manager_internal_error_on_exception(self):
@@ -166,5 +166,5 @@ class Test_container_managers(TestCase):
 
             self.assertEquals(
                 expected_error(ID, JSONRPC_ERRORS['INTERNAL_ERROR']),
-                container_managers.delete_container_manager(
+                container_managers.delete_container_manager.handler(
                     SIMPLE_CONTAINER_MANAGER_CONFIG_REQUEST, bus))

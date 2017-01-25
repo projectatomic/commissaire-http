@@ -23,7 +23,7 @@ from commissaire import bus as _bus
 from commissaire_http.constants import JSONRPC_ERRORS
 
 from commissaire_http.handlers import (
-    LOGGER, create_jsonrpc_response, create_jsonrpc_error)
+    LOGGER, JSONRPC_Handler, create_jsonrpc_response, create_jsonrpc_error)
 
 
 def _register(router):
@@ -73,6 +73,7 @@ def _register(router):
     return router
 
 
+@JSONRPC_Handler
 def get_cluster_deploy(message, bus):
     """
     Gets a specific deployment.
@@ -104,6 +105,7 @@ def get_cluster_deploy(message, bus):
             message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
 
 
+@JSONRPC_Handler
 def create_cluster_deploy(message, bus):
     """
     Creates a new cluster deployment.
@@ -138,6 +140,7 @@ def create_cluster_deploy(message, bus):
             message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
 
 
+@JSONRPC_Handler
 def get_cluster_upgrade(message, bus):  # pragma: no cover
     """
     Gets a new cluster upgrade.
@@ -152,6 +155,7 @@ def get_cluster_upgrade(message, bus):  # pragma: no cover
     return get_cluster_operation(models.ClusterUpgrade, message, bus)
 
 
+@JSONRPC_Handler
 def create_cluster_upgrade(message, bus):  # pragma: no cover
     """
     Creates a new cluster upgrade.
@@ -167,6 +171,7 @@ def create_cluster_upgrade(message, bus):  # pragma: no cover
         models.ClusterUpgrade, message, bus, 'jobs.clusterexec.upgrade')
 
 
+@JSONRPC_Handler
 def get_cluster_restart(message, bus):  # pragma: no cover
     """
     Gets a new cluster restart.
@@ -181,6 +186,7 @@ def get_cluster_restart(message, bus):  # pragma: no cover
     return get_cluster_operation(models.ClusterRestart, message, bus)
 
 
+@JSONRPC_Handler
 def create_cluster_restart(message, bus):  # pragma: no cover
     """
     Creates a new cluster restart.

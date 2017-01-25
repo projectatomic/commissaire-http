@@ -18,6 +18,7 @@ Built-in handlers.
 
 import json
 import logging
+import uuid
 
 from html import escape
 from urllib.parse import parse_qs
@@ -86,6 +87,116 @@ def get_params(environ):
     return param_dict
 
 
+class BasicHandler(object):
+    """
+    Base decorator class for handler functions.
+
+    Calls the handler function without any extra processing.
+
+    All other handler classes should be derived from the BasicHandler class.
+    The BasicHandler class itself serves only as a tag when loading handlers.
+    """
+
+    def __init__(self, handler):
+        """
+        Stashes the handler function to be used in __call__().
+
+        :param handler: Handler function.
+        :type handler: callable
+        """
+        self.handler = handler
+
+    def __call__(self, environ, start_response):
+        """
+        Calls the handler function without any extra processing.
+
+        :param environ: WSGI environment dictionary.
+        :type environ: dict
+        :param start_response: WSGI start_response callable.
+        :type start_response: callable
+        """
+        return self.handler(environ, start_response)
+
+
+class JSONRPC_Handler(BasicHandler):
+    """
+    Decorator class for JSON-RPC handler functions.
+
+    Converts HTTP parameters to a JSON-RPC message, and converts errors in a
+    JSON-RPC response to HTTP error codes.
+    """
+
+    def __call__(self, environ, start_response):
+        """
+        Calls the JSON-RPC handler function, with extra processing before and
+        after.
+
+        :param environ: WSGI environment dictionary.
+        :type environ: dict
+        :param start_response: WSGI start_response callable.
+        :type start_response: callable
+        """
+
+        bus = environ['commissaire.bus']
+        route_dict, route = environ['commissaire.routematch']
+
+        # Extract request parameters.
+        param_dict = get_params(environ)
+        if param_dict is None:
+            start_response(
+                '400 Bad Request', [('content-type', 'text/html')])
+            return [bytes('Bad Request', 'utf8')]
+
+        # 'method' is normally supposed to be the method to be
+        # called, but we hijack it for the HTTP request method.
+        jsonrpc_message = {
+            'jsonrpc': '2.0',
+            'id': str(uuid.uuid4()),
+            'method': environ['REQUEST_METHOD'],
+            'params': param_dict
+        }
+        LOGGER.debug(
+            'Request transformed to "{}"'.format(jsonrpc_message))
+
+        result = self.handler(jsonrpc_message, bus)
+
+        handler_name = self.handler.__name__
+        LOGGER.debug('Handler {} returned "{}"'.format(handler_name, result))
+
+        if 'error' in result.keys():
+            error_code = result['error']['code']
+            if error_code == JSONRPC_ERRORS['BAD_REQUEST']:
+                status = '400 Bad Request'
+            elif error_code == JSONRPC_ERRORS['NOT_FOUND']:
+                status = '404 Not Found'
+            elif error_code == JSONRPC_ERRORS['CONFLICT']:
+                status = '409 Conflict'
+            else:
+                message = 'Unhandled error code {}'.format(error_code)
+                self.logger.error('{}: {}'.format(message, result))
+                raise Exception(message)
+            start_response(status, [('content-type', 'text/html')])
+            response_body = status[4:]
+
+        elif 'result' in result.keys():
+            status = '200 OK'
+            if environ['REQUEST_METHOD'] == 'PUT':
+                # action=add is for endpoints that add a
+                # member to a set, in which case nothing
+                # is being created, so return 200 OK.
+                if route_dict.get('action') != 'add':
+                    status = '201 Created'
+            start_response(status, [('content-type', 'application/json')])
+            response_body = json.dumps(result['result'])
+
+        else:
+            message = 'Malformed JSON-RPC response message'
+            self.logger.error('{}: {}'.format(message, result))
+            raise Exception(message)
+
+        return [bytes(response_body, 'utf8')]
+
+
 def create_jsonrpc_error(message, error, error_code):
     """
     Shortcut for logging and returning an error.
@@ -142,6 +253,7 @@ def create_jsonrpc_response(id, result=None, error=None,
     return jsonrpc_response
 
 
+@JSONRPC_Handler
 def hello_world(message, bus):  # pragma: no cover
     """
     Example function handler that simply says hello. If name is given
@@ -160,6 +272,7 @@ def hello_world(message, bus):  # pragma: no cover
     return create_jsonrpc_response(message['id'], response_msg)
 
 
+@JSONRPC_Handler
 def create_world(message, bus):  # pragma: no cover
     """
     Example function handler that simply says hello. If name is given
@@ -188,6 +301,7 @@ class ClassHandlerExample:  # pragma: no cover
     Example class based handlers.
     """
 
+    @JSONRPC_Handler
     def hello(self, message, bus):
         """
         Example method handler that simply says hello. If name is given

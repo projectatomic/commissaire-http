@@ -16,17 +16,14 @@
 Prototype dispatcher.
 """
 
-import json
 import logging
 import traceback
-import uuid
 
 from importlib import import_module
-from inspect import signature, isfunction, isclass
+from inspect import isclass
 
 from commissaire_http.bus import Bus
-from commissaire_http.constants import JSONRPC_ERRORS
-from commissaire_http.handlers import get_params
+from commissaire_http.handlers import BasicHandler
 
 
 def ls_mod(mod, pkg):
@@ -111,14 +108,13 @@ class Dispatcher:
             try:
                 mod = import_module(pkg)
                 for item, attr, mod_path in ls_mod(mod, pkg):
-                    if isfunction(attr):
-                        # Check that it has 2 inputs
-                        if len(signature(attr).parameters) == 2:
-                            self._handler_map[mod_path] = attr
-                            self.logger.info(
-                                'Loaded function handler {} to {}'.format(
-                                    mod_path, attr))
-                    elif isclass(attr) and issubclass(attr, object):
+                    if isinstance(attr, BasicHandler):
+                        self._handler_map[mod_path] = attr
+                        self.logger.info(
+                            'Loaded function handler {} to {}'.format(
+                                mod_path, attr))
+                    elif (isclass(attr) and issubclass(attr, object) and
+                            not issubclass(attr, BasicHandler)):
                         handler_instance = attr()
                         for handler_meth, sub_attr, sub_mod_path in \
                                 ls_mod(handler_instance, pkg):
@@ -126,7 +122,7 @@ class Dispatcher:
                             self._handler_map[key] = getattr(
                                 handler_instance, handler_meth)
                             self.logger.info(
-                                'Instansiated and loaded class handler '
+                                'Instantiated and loaded class handler '
                                 '{} to {}'.format(key, handler_instance))
                     else:
                         self.logger.debug(
@@ -156,6 +152,9 @@ class Dispatcher:
                 'Bus can not be None when dispatching. '
                 'Please call dispatcher.setup_bus().')
 
+        # Add the bus instance to the WSGI environment dictionary.
+        environ['commissaire.bus'] = self._bus
+
         # Add the routematch results to the WSGI environment dictionary.
         match_result = self._router.routematch(environ['PATH_INFO'], environ)
         if match_result is None:
@@ -165,85 +164,25 @@ class Dispatcher:
             return [bytes('Not Found', 'utf8')]
         environ['commissaire.routematch'] = match_result
 
-        # Split up the route from the route data
-        route, route_data = match_result
+        route_dict = match_result[0]
+        route_controller = route_dict['controller']
 
-        # Get the parameters
-        try:
-            params = get_params(environ)
-        except Exception as error:
-            start_response(
-                '400 Bad Request',
-                [('content-type', 'text/html')])
-            return [bytes('Bad Request', 'utf8')]
-
-        # method is normally supposed to be the method to be called
-        # but we hijack it for the method that was used over HTTP
-        jsonrpc_msg = {
-            'jsonrpc': '2.0',
-            'id': str(uuid.uuid4()),
-            'method': environ['REQUEST_METHOD'],
-            'params': params,
-        }
-
-        self.logger.debug(
-            'Request transformed to "{}".'.format(jsonrpc_msg))
-        # Get the resulting message back
         try:
             # If the handler registered is a callable, use it
-            if callable(route['controller']):
-                handler = route['controller']
+            if callable(route_controller):
+                handler = route_controller
             # Else load what we found earlier
             else:
-                handler = self._handler_map.get(route['controller'])
-            self.logger.debug('Using controller {}->{}'.format(
-                route, handler))
-
-            result = handler(jsonrpc_msg, bus=self._bus)
+                handler = self._handler_map.get(route_controller)
             self.logger.debug(
-                'Handler {} returned "{}"'.format(
-                    route['controller'], result))
-            if 'error' in result.keys():
-                error = result['error']
-                # If it's Invalid params handle it
-                if error['code'] == JSONRPC_ERRORS['BAD_REQUEST']:
-                    start_response(
-                        '400 Bad Request',
-                        [('content-type', 'application/json')])
-                    return [bytes(json.dumps(error), 'utf8')]
-                elif error['code'] == JSONRPC_ERRORS['NOT_FOUND']:
-                    start_response(
-                        '404 Not Found',
-                        [('content-type', 'application/json')])
-                    return [bytes(json.dumps(error), 'utf8')]
-                elif error['code'] == JSONRPC_ERRORS['CONFLICT']:
-                    start_response(
-                        '409 Conflict',
-                        [('content-type', 'application/json')])
-                    return [bytes(json.dumps(error), 'utf8')]
-                # Otherwise treat it like a 500 by raising
-                raise Exception(result['error'])
-            elif 'result' in result.keys():
-                status = '200 OK'
-                if environ['REQUEST_METHOD'] == 'PUT':
-                    # action=add is for endpoints that add a
-                    # member to a set, in which case nothing
-                    # is being created, so return 200 OK.
-                    if route.get('action') != 'add':
-                        status = '201 Created'
-                start_response(
-                    status, [('content-type', 'application/json')])
-                return [bytes(json.dumps(result['result']), 'utf8')]
+                'Using controller {}->{}'.format(route_dict, handler))
+
+            return handler(environ, start_response)
         except Exception as error:
             self.logger.error(
-                'Exception raised while {} handled "{}":\n{}'.format(
-                    route['controller'], jsonrpc_msg,
-                    traceback.format_exc()))
+                'Exception raised in handler {}:\n{}'.format(
+                    route_controller, traceback.format_exc()))
             start_response(
                 '500 Internal Server Error',
                 [('content-type', 'text/html')])
             return [bytes('Internal Server Error', 'utf8')]
-
-        # Otherwise handle it as a generic 404
-        start_response('404 Not Found', [('content-type', 'text/html')])
-        return [bytes('Not Found', 'utf8')]

@@ -22,7 +22,7 @@ from commissaire import bus as _bus
 from commissaire import models
 from commissaire_http.constants import JSONRPC_ERRORS
 from commissaire_http.handlers import (
-    LOGGER, create_jsonrpc_response, create_jsonrpc_error)
+    LOGGER, JSONRPC_Handler, create_jsonrpc_response, create_jsonrpc_error)
 
 
 def _register(router):
@@ -72,6 +72,7 @@ def _register(router):
     return router
 
 
+@JSONRPC_Handler
 def list_hosts(message, bus):
     """
     Lists all hosts.
@@ -89,6 +90,7 @@ def list_hosts(message, bus):
         [host.to_dict_safe() for host in container.hosts])
 
 
+@JSONRPC_Handler
 def get_host(message, bus):
     """
     Gets a specific host.
@@ -111,6 +113,7 @@ def get_host(message, bus):
             message, error, JSONRPC_ERRORS['NOT_FOUND'])
 
 
+@JSONRPC_Handler
 def create_host(message, bus):
     """
     Creates a new host.
@@ -193,6 +196,7 @@ def create_host(message, bus):
             message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
 
 
+@JSONRPC_Handler
 def delete_host(message, bus):
     """
     Deletes an existing host.
@@ -236,6 +240,7 @@ def delete_host(message, bus):
             message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
 
 
+@JSONRPC_Handler
 def get_hostcreds(message, bus):
     """
     Gets credentials for a host.
@@ -262,6 +267,7 @@ def get_hostcreds(message, bus):
             message, error, JSONRPC_ERRORS['NOT_FOUND'])
 
 
+@JSONRPC_Handler
 def get_host_status(message, bus):
     """
     Gets the status of an exisiting host.

@@ -63,7 +63,7 @@ class Test_deploy_operations(TestCase):
 
         self.assertEquals(
             create_jsonrpc_response(ID, CLUSTER_DEPLOY.to_dict()),
-            operations.get_cluster_deploy(SIMPLE_DEPLOY_REQUEST, bus))
+            operations.get_cluster_deploy.handler(SIMPLE_DEPLOY_REQUEST, bus))
 
     def test_get_cluster_deploy_that_doesnt_exist(self):
         """
@@ -74,7 +74,7 @@ class Test_deploy_operations(TestCase):
 
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['NOT_FOUND']),
-            operations.get_cluster_deploy(SIMPLE_DEPLOY_REQUEST, bus))
+            operations.get_cluster_deploy.handler(SIMPLE_DEPLOY_REQUEST, bus))
 
     def test_get_cluster_deploy_with_invalid_data(self):
         """
@@ -85,8 +85,7 @@ class Test_deploy_operations(TestCase):
 
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['INVALID_PARAMETERS']),
-            operations.get_cluster_deploy(
-                BAD_DEPLOY_REQUEST, bus))
+            operations.get_cluster_deploy.handler(BAD_DEPLOY_REQUEST, bus))
 
     def test_create_cluster_deploy(self):
         """
@@ -98,8 +97,7 @@ class Test_deploy_operations(TestCase):
 
         self.assertEquals(
             create_jsonrpc_response(ID, CLUSTER_DEPLOY.to_dict()),
-            operations.create_cluster_deploy(
-                SIMPLE_DEPLOY_REQUEST, bus))
+            operations.create_cluster_deploy.handler(SIMPLE_DEPLOY_REQUEST, bus))
 
     def test_create_cluster_deploy_with_invalid_data(self):
         """
@@ -111,8 +109,7 @@ class Test_deploy_operations(TestCase):
 
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['INVALID_PARAMETERS']),
-            operations.create_cluster_deploy(
-                BAD_DEPLOY_REQUEST, bus))
+            operations.create_cluster_deploy.handler(BAD_DEPLOY_REQUEST, bus))
 
     def test_create_cluster_deploy_with_rpc_error(self):
         """
@@ -123,8 +120,7 @@ class Test_deploy_operations(TestCase):
 
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['INTERNAL_ERROR']),
-            operations.create_cluster_deploy(
-                SIMPLE_DEPLOY_REQUEST, bus))
+            operations.create_cluster_deploy.handler(SIMPLE_DEPLOY_REQUEST, bus))
 
 
 #: Generic cluster upgrade instance

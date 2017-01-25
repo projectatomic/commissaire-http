@@ -22,7 +22,7 @@ from commissaire import bus as _bus
 from commissaire_http.constants import JSONRPC_ERRORS
 
 from commissaire_http.handlers import (
-    LOGGER, create_jsonrpc_response, create_jsonrpc_error)
+    LOGGER, JSONRPC_Handler, create_jsonrpc_response, create_jsonrpc_error)
 
 
 def _register(router):
@@ -95,6 +95,7 @@ def _register(router):
     return router
 
 
+@JSONRPC_Handler
 def list_clusters(message, bus):
     """
     Lists all clusters.
@@ -112,6 +113,7 @@ def list_clusters(message, bus):
         [cluster.name for cluster in container.clusters])
 
 
+@JSONRPC_Handler
 def get_cluster(message, bus):
     """
     Gets a specific cluster.
@@ -149,6 +151,7 @@ def get_cluster(message, bus):
     return create_jsonrpc_response(message['id'], cluster.to_dict_with_hosts())
 
 
+@JSONRPC_Handler
 def create_cluster(message, bus):
     """
     Creates a new cluster.
@@ -186,6 +189,7 @@ def create_cluster(message, bus):
             message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
 
 
+@JSONRPC_Handler
 def delete_cluster(message, bus):
     """
     Deletes an existing cluster.
@@ -212,6 +216,7 @@ def delete_cluster(message, bus):
             message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
 
 
+@JSONRPC_Handler
 def list_cluster_members(message, bus):
     """
     Lists hosts in a cluster.
@@ -240,6 +245,7 @@ def list_cluster_members(message, bus):
             message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
 
 
+@JSONRPC_Handler
 def update_cluster_members(message, bus):
     """
     Updates the list of members in a cluster.
@@ -286,6 +292,7 @@ def update_cluster_members(message, bus):
     return create_jsonrpc_response(message['id'], saved_cluster.to_dict())
 
 
+@JSONRPC_Handler
 def check_cluster_member(message, bus):
     """
     Checks is a member is part of the cluster.
@@ -314,6 +321,7 @@ def check_cluster_member(message, bus):
             message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
 
 
+@JSONRPC_Handler
 def add_cluster_member(message, bus):
     """
     Adds a member to the cluster.
@@ -349,6 +357,7 @@ def add_cluster_member(message, bus):
             message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
 
 
+@JSONRPC_Handler
 def delete_cluster_member(message, bus):
     """
     Deletes a member from the cluster.

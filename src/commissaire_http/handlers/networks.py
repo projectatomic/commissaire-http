@@ -20,7 +20,7 @@ from commissaire import models
 from commissaire import bus as _bus
 from commissaire_http.constants import JSONRPC_ERRORS
 from commissaire_http.handlers import (
-    LOGGER, create_jsonrpc_response, create_jsonrpc_error)
+    LOGGER, JSONRPC_Handler, create_jsonrpc_response, create_jsonrpc_error)
 
 
 def _register(router):
@@ -58,6 +58,7 @@ def _register(router):
     return router
 
 
+@JSONRPC_Handler
 def list_networks(message, bus):
     """
     Lists all networks.
@@ -79,6 +80,7 @@ def list_networks(message, bus):
             message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
 
 
+@JSONRPC_Handler
 def get_network(message, bus):
     """
     Gets a specific network.
@@ -102,6 +104,7 @@ def get_network(message, bus):
             message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
 
 
+@JSONRPC_Handler
 def create_network(message, bus):
     """
     Creates a new network.
@@ -148,6 +151,7 @@ def create_network(message, bus):
             message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
 
 
+@JSONRPC_Handler
 def delete_network(message, bus):
     """
     Deletes an exisiting network.

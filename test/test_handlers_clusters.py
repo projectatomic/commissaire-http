@@ -78,7 +78,7 @@ class Test_clusters(TestCase):
         bus.storage.list.return_value = Clusters.new(clusters=[CLUSTER])
         self.assertEquals(
             create_jsonrpc_response(ID, [CLUSTER.name]),
-            clusters.list_clusters(NO_PARAMS_REQUEST, bus))
+            clusters.list_clusters.handler(NO_PARAMS_REQUEST, bus))
 
     def test_get_cluster(self):
         """
@@ -97,7 +97,7 @@ class Test_clusters(TestCase):
                 'status': C.CLUSTER_STATUS_OK,
                 'container_manager': '',
             }),
-            clusters.get_cluster(SIMPLE_CLUSTER_REQUEST, bus))
+            clusters.get_cluster.handler(SIMPLE_CLUSTER_REQUEST, bus))
 
     def test_create_cluster(self):
         """
@@ -109,7 +109,7 @@ class Test_clusters(TestCase):
 
         self.assertEquals(
             create_jsonrpc_response(ID, CLUSTER.to_dict_safe()),
-            clusters.create_cluster(SIMPLE_CLUSTER_REQUEST, bus))
+            clusters.create_cluster.handler(SIMPLE_CLUSTER_REQUEST, bus))
 
     def test_create_cluster_with_invalid_data(self):
         """
@@ -124,7 +124,7 @@ class Test_clusters(TestCase):
 
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['INVALID_REQUEST']),
-            clusters.create_cluster({
+            clusters.create_cluster.handler({
                 'jsonrpc': '2.0',
                 'id': ID,
                 'params': {'name': bad_cluster.name}
@@ -144,7 +144,7 @@ class Test_clusters(TestCase):
         bus.storage.save.return_value = cluster
 
         # Call the handler...
-        clusters.create_cluster(copy.deepcopy(NETWORK_CLUSTER_REQUEST), bus)
+        clusters.create_cluster.handler(copy.deepcopy(NETWORK_CLUSTER_REQUEST), bus)
 
         bus.storage.save.assert_called_with(mock.ANY)
 
@@ -162,7 +162,7 @@ class Test_clusters(TestCase):
         bus.storage.save.return_value = cluster
 
         # Call the handler...
-        clusters.create_cluster(copy.deepcopy(NETWORK_CLUSTER_REQUEST), bus)
+        clusters.create_cluster.handler(copy.deepcopy(NETWORK_CLUSTER_REQUEST), bus)
         # Update clusters network to be 'default' as we expect 'test' to be
         # rejected by the handler
         cluster.network = 'default'
@@ -177,7 +177,7 @@ class Test_clusters(TestCase):
         bus.storage.delete.return_value = None
         self.assertEquals(
             create_jsonrpc_response(ID, []),
-            clusters.delete_cluster(SIMPLE_CLUSTER_REQUEST, bus))
+            clusters.delete_cluster.handler(SIMPLE_CLUSTER_REQUEST, bus))
 
     def test_delete_cluster_that_does_not_exist(self):
         """
@@ -187,7 +187,7 @@ class Test_clusters(TestCase):
         bus.storage.delete.side_effect = _bus.RemoteProcedureCallError('test')
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['NOT_FOUND']),
-            clusters.delete_cluster(SIMPLE_CLUSTER_REQUEST, bus))
+            clusters.delete_cluster.handler(SIMPLE_CLUSTER_REQUEST, bus))
 
     def test_delete_cluster_on_unexpected_error(self):
         """
@@ -197,7 +197,7 @@ class Test_clusters(TestCase):
         bus.storage.delete.side_effect = Exception('test')
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['INTERNAL_ERROR']),
-            clusters.delete_cluster(SIMPLE_CLUSTER_REQUEST, bus))
+            clusters.delete_cluster.handler(SIMPLE_CLUSTER_REQUEST, bus))
 
     def test_list_cluster_members(self):
         """
@@ -208,7 +208,7 @@ class Test_clusters(TestCase):
             name='test', hostset=['127.0.0.1'])
         self.assertEquals(
             create_jsonrpc_response(ID, ['127.0.0.1']),
-            clusters.list_cluster_members(SIMPLE_CLUSTER_REQUEST, bus))
+            clusters.list_cluster_members.handler(SIMPLE_CLUSTER_REQUEST, bus))
 
     def test_update_cluster_members_with_valid_input(self):
         """
@@ -221,7 +221,7 @@ class Test_clusters(TestCase):
         bus.storage.get_cluster.return_value = cluster
         bus.storage.save.return_value = cluster
 
-        result = clusters.update_cluster_members({
+        result = clusters.update_cluster_members.handler({
             'jsonrpc': '2.0',
             'id': '123',
             'params': {'name': 'test', 'old': ['127.0.0.1'], 'new': []}
@@ -239,7 +239,7 @@ class Test_clusters(TestCase):
 
         bus.storage.get_cluster.return_value = cluster
 
-        result = clusters.update_cluster_members({
+        result = clusters.update_cluster_members.handler({
             'jsonrpc': '2.0',
             'id': '123',
             'params': {'name': 'test', 'old': [], 'new': []}
@@ -257,7 +257,7 @@ class Test_clusters(TestCase):
                 {},
                 {'old': []},
                 {'new': []}):
-            result = clusters.update_cluster_members({
+            result = clusters.update_cluster_members.handler({
                 'jsonrpc': '2.0',
                 'id': ID,
                 'params': params,
@@ -279,7 +279,7 @@ class Test_clusters(TestCase):
 
         self.assertEquals(
             create_jsonrpc_response(ID, ['127.0.0.1']),
-            clusters.check_cluster_member(CHECK_CLUSTER_REQUEST, bus))
+            clusters.check_cluster_member.handler(CHECK_CLUSTER_REQUEST, bus))
 
     def test_check_cluster_member_with_invalid_member(self):
         """
@@ -291,7 +291,7 @@ class Test_clusters(TestCase):
 
         bus.storage.get_cluster.return_value = cluster
 
-        result = clusters.check_cluster_member({
+        result = clusters.check_cluster_member.handler({
             'jsonrpc': '2.0',
             'id': ID,
             'params': {'name': 'test', 'host': '127.0.0.2'}
@@ -315,7 +315,7 @@ class Test_clusters(TestCase):
         expected_response = create_jsonrpc_response(ID, ['127.0.0.1'])
         self.assertEquals(
             expected_response,
-            clusters.add_cluster_member(CHECK_CLUSTER_REQUEST, bus))
+            clusters.add_cluster_member.handler(CHECK_CLUSTER_REQUEST, bus))
 
     def test_delete_cluster_member_with_valid_member(self):
         """
@@ -330,4 +330,4 @@ class Test_clusters(TestCase):
 
         self.assertEquals(
             create_jsonrpc_response(ID, []),
-            clusters.delete_cluster_member(CHECK_CLUSTER_REQUEST, bus))
+            clusters.delete_cluster_member.handler(CHECK_CLUSTER_REQUEST, bus))
