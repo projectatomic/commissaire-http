@@ -21,34 +21,12 @@ import logging
 import traceback
 import uuid
 
-from html import escape
 from importlib import import_module
 from inspect import signature, isfunction, isclass
-from urllib.parse import parse_qs
 
 from commissaire_http.bus import Bus
 from commissaire_http.constants import JSONRPC_ERRORS
-
-
-def parse_query_string(qs):
-    """
-    Parses a query string into parameters.
-
-    :param qs: A query string.
-    :type qs: str
-    :returns: A dictionary of parameters.
-    :rtype: dict
-    """
-    new_qs = {}
-    for key, value in parse_qs(qs).items():
-        if len(value) == 1:
-            new_qs[key] = escape(value[0])
-        else:
-            new_value = []
-            for item in value:
-                new_value.append(escape(item))
-            new_qs[key] = new_value
-    return new_qs
+from commissaire_http.handlers import parse_query_string
 
 
 def ls_mod(mod, pkg):

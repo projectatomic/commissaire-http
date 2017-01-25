@@ -17,7 +17,7 @@ Test for commissaire_http.dispatcher.parse_query_string
 """
 
 from . import TestCase
-from commissaire_http.dispatcher import parse_query_string
+from commissaire_http.handlers import parse_query_string
 
 
 class Test_parse_query_string(TestCase):
