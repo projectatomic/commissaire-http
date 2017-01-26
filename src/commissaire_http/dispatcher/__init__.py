@@ -188,88 +188,94 @@ class Dispatcher:
             raise DispatcherError(
                 'Bus can not be None when dispatching. '
                 'Please call dispatcher.setup_bus().')
-        route_info = self._router.routematch(environ['PATH_INFO'], environ)
 
-        # If we have valid route_info
-        if route_info:
-            # Split up the route from the route data
-            route, route_data = route_info
+        # Add the routematch results to the WSGI environment dictionary.
+        match_result = self._router.routematch(environ['PATH_INFO'], environ)
+        if match_result is None:
+            start_response(
+                '404 Not Found',
+                [('content-type', 'text/html')])
+            return [bytes('Not Found', 'utf8')]
+        environ['commissaire.routematch'] = match_result
 
-            # Get the parameters
-            try:
-                params = self._get_params(environ, route, route_data)
-            except Exception as error:
-                start_response(
-                    '400 Bad Request',
-                    [('content-type', 'text/html')])
-                return [bytes('Bad Request', 'utf8')]
+        # Split up the route from the route data
+        route, route_data = match_result
 
-            # method is normally supposed to be the method to be called
-            # but we hijack it for the method that was used over HTTP
-            jsonrpc_msg = {
-                'jsonrpc': '2.0',
-                'id': str(uuid.uuid4()),
-                'method': environ['REQUEST_METHOD'],
-                'params': params,
-            }
+        # Get the parameters
+        try:
+            params = self._get_params(environ, route, route_data)
+        except Exception as error:
+            start_response(
+                '400 Bad Request',
+                [('content-type', 'text/html')])
+            return [bytes('Bad Request', 'utf8')]
 
+        # method is normally supposed to be the method to be called
+        # but we hijack it for the method that was used over HTTP
+        jsonrpc_msg = {
+            'jsonrpc': '2.0',
+            'id': str(uuid.uuid4()),
+            'method': environ['REQUEST_METHOD'],
+            'params': params,
+        }
+
+        self.logger.debug(
+            'Request transformed to "{}".'.format(jsonrpc_msg))
+        # Get the resulting message back
+        try:
+            # If the handler registered is a callable, use it
+            if callable(route['controller']):
+                handler = route['controller']
+            # Else load what we found earlier
+            else:
+                handler = self._handler_map.get(route['controller'])
+            self.logger.debug('Using controller {}->{}'.format(
+                route, handler))
+
+            result = handler(jsonrpc_msg, bus=self._bus)
             self.logger.debug(
-                'Request transformed to "{}".'.format(jsonrpc_msg))
-            # Get the resulting message back
-            try:
-                # If the handler registered is a callable, use it
-                if callable(route['controller']):
-                    handler = route['controller']
-                # Else load what we found earlier
-                else:
-                    handler = self._handler_map.get(route['controller'])
-                self.logger.debug('Using controller {}->{}'.format(
-                    route, handler))
-
-                result = handler(jsonrpc_msg, bus=self._bus)
-                self.logger.debug(
-                    'Handler {} returned "{}"'.format(
-                        route['controller'], result))
-                if 'error' in result.keys():
-                    error = result['error']
-                    # If it's Invalid params handle it
-                    if error['code'] == JSONRPC_ERRORS['BAD_REQUEST']:
-                        start_response(
-                            '400 Bad Request',
-                            [('content-type', 'application/json')])
-                        return [bytes(json.dumps(error), 'utf8')]
-                    elif error['code'] == JSONRPC_ERRORS['NOT_FOUND']:
-                        start_response(
-                            '404 Not Found',
-                            [('content-type', 'application/json')])
-                        return [bytes(json.dumps(error), 'utf8')]
-                    elif error['code'] == JSONRPC_ERRORS['CONFLICT']:
-                        start_response(
-                            '409 Conflict',
-                            [('content-type', 'application/json')])
-                        return [bytes(json.dumps(error), 'utf8')]
-                    # Otherwise treat it like a 500 by raising
-                    raise Exception(result['error'])
-                elif 'result' in result.keys():
-                    status = '200 OK'
-                    if environ['REQUEST_METHOD'] == 'PUT':
-                        # action=add is for endpoints that add a
-                        # member to a set, in which case nothing
-                        # is being created, so return 200 OK.
-                        if route.get('action') != 'add':
-                            status = '201 Created'
+                'Handler {} returned "{}"'.format(
+                    route['controller'], result))
+            if 'error' in result.keys():
+                error = result['error']
+                # If it's Invalid params handle it
+                if error['code'] == JSONRPC_ERRORS['BAD_REQUEST']:
                     start_response(
-                        status, [('content-type', 'application/json')])
-                    return [bytes(json.dumps(result['result']), 'utf8')]
-            except Exception as error:
-                self.logger.error(
-                    'Exception raised while {} handled "{}":\n{}'.format(
-                        route['controller'], jsonrpc_msg,
-                        traceback.format_exc()))
+                        '400 Bad Request',
+                        [('content-type', 'application/json')])
+                    return [bytes(json.dumps(error), 'utf8')]
+                elif error['code'] == JSONRPC_ERRORS['NOT_FOUND']:
+                    start_response(
+                        '404 Not Found',
+                        [('content-type', 'application/json')])
+                    return [bytes(json.dumps(error), 'utf8')]
+                elif error['code'] == JSONRPC_ERRORS['CONFLICT']:
+                    start_response(
+                        '409 Conflict',
+                        [('content-type', 'application/json')])
+                    return [bytes(json.dumps(error), 'utf8')]
+                # Otherwise treat it like a 500 by raising
+                raise Exception(result['error'])
+            elif 'result' in result.keys():
+                status = '200 OK'
+                if environ['REQUEST_METHOD'] == 'PUT':
+                    # action=add is for endpoints that add a
+                    # member to a set, in which case nothing
+                    # is being created, so return 200 OK.
+                    if route.get('action') != 'add':
+                        status = '201 Created'
                 start_response(
-                    '500 Internal Server Error',
-                    [('content-type', 'text/html')])
-                return [bytes('Internal Server Error', 'utf8')]
+                    status, [('content-type', 'application/json')])
+                return [bytes(json.dumps(result['result']), 'utf8')]
+        except Exception as error:
+            self.logger.error(
+                'Exception raised while {} handled "{}":\n{}'.format(
+                    route['controller'], jsonrpc_msg,
+                    traceback.format_exc()))
+            start_response(
+                '500 Internal Server Error',
+                [('content-type', 'text/html')])
+            return [bytes('Internal Server Error', 'utf8')]
 
         # Otherwise handle it as a generic 404
         start_response('404 Not Found', [('content-type', 'text/html')])
