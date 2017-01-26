@@ -26,7 +26,7 @@ from inspect import signature, isfunction, isclass
 
 from commissaire_http.bus import Bus
 from commissaire_http.constants import JSONRPC_ERRORS
-from commissaire_http.handlers import parse_query_string
+from commissaire_http.handlers import get_params
 
 
 def ls_mod(mod, pkg):
@@ -137,39 +137,6 @@ class Dispatcher:
                     'Unable to import handler package "{}". {}: {}'.format(
                         pkg, type(error), error))
 
-    def _get_params(self, environ, route, route_data):
-        """
-        Handles pulling parameters out of the various inputs.
-
-        :param environ: WSGI environment dictionary.
-        :type environ: dict
-        :param route: The route structure returned by a routematch.
-        :type route: dict
-        :param route_data: Specific internals on a matched route.
-        :type route_data: dict
-        :returns: The found parameters.
-        :rtype: dict
-        """
-        params = {}
-        # Initial params come from the urllib
-        for param_key in route_data.minkeys:
-            params[param_key] = route[param_key]
-
-        # If we are a PUT or POST look for params in wsgi.input
-        if environ['REQUEST_METHOD'] in ('PUT', 'POST'):
-            content_length = int(environ.get('CONTENT_LENGTH', 0))
-            if content_length > 0:
-                try:
-                    wsgi_input = environ['wsgi.input'].read(content_length)
-                    more_params = json.loads(wsgi_input.decode())
-                    params.update(more_params)
-                except (ValueError, json.decoder.JSONDecodeError) as error:
-                    self.logger.debug(
-                        'Unable to read "wsgi.input": {}'.format(error))
-        else:
-            params.update(parse_query_string(environ.get('QUERY_STRING')))
-        return params
-
     def dispatch(self, environ, start_response):
         """
         Dispatches an HTTP request into a jsonrpc message, passes it to a
@@ -203,7 +170,7 @@ class Dispatcher:
 
         # Get the parameters
         try:
-            params = self._get_params(environ, route, route_data)
+            params = get_params(environ)
         except Exception as error:
             start_response(
                 '400 Bad Request',

@@ -16,6 +16,7 @@
 Built-in handlers.
 """
 
+import json
 import logging
 
 from html import escape
@@ -46,6 +47,43 @@ def parse_query_string(qs):
                 new_value.append(escape(item))
             new_qs[key] = new_value
     return new_qs
+
+
+def get_params(environ):
+    """
+    Handles pulling parameters out of the various inputs.
+
+    :param environ: WSGI environment dictionary.
+    :type environ: dict
+    :returns: A parameter dictionary.
+    :rtype: dict
+    """
+    route_dict, route = environ['commissaire.routematch']
+    param_dict = {}
+
+    # Initial parameters come from the urllib.
+    for param_key in route.minkeys:
+        param_dict[param_key] = route_dict[param_key]
+
+    # If we are a PUT or POST, look for parameters in wsgi.input.
+    if environ['REQUEST_METHOD'] in ('PUT', 'POST'):
+        try:
+            content_length = int(environ.get('CONTENT_LENGTH', 0))
+        except ValueError:
+            content_length = 0
+        if content_length > 0:
+            try:
+                wsgi_input = environ['wsgi.input'].read(content_length)
+                more_params = json.loads(wsgi_input.decode())
+                param_dict.update(more_params)
+            except (ValueError, json.decoder.JSONDecodeError) as error:
+                LOGGER.error(
+                    'Unable to read "wsgi.input": {}'.format(error))
+                return None
+    else:
+        param_dict.update(parse_query_string(environ.get('QUERY_STRING')))
+
+    return param_dict
 
 
 def create_jsonrpc_error(message, error, error_code):
