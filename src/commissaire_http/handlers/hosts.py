@@ -129,6 +129,7 @@ def create_host(message, bus):
             JSONRPC_ERRORS['INVALID_PARAMETERS'])
 
     # If a cluster if provided, grab it from storage
+    cluster_data = {}
     cluster_name = message['params'].get('cluster')
     if cluster_name:
         cluster = _does_cluster_exist(bus, cluster_name)
@@ -136,8 +137,9 @@ def create_host(message, bus):
             return return_error(
                 message, 'Cluster does not exist',
                 JSONRPC_ERRORS['INVALID_PARAMETERS'])
-        LOGGER.debug('Found cluster. Data: "{}"'.format(cluster))
-
+        else:
+            cluster_data = cluster.to_dict()
+            LOGGER.debug('Found cluster. Data: "{}"'.format(cluster))
     try:
         host = bus.storage.get_host(address)
         LOGGER.debug('Host "{}" already exisits.'.format(address))
@@ -173,7 +175,9 @@ def create_host(message, bus):
         host = bus.storage.save(models.Host.new(**message['params']))
 
         # pass this off to the investigator
-        bus.notify('jobs.investigate', params={'address': address})
+        bus.notify(
+            'jobs.investigate',
+            params={'address': address, 'cluster_data': cluster_data})
 
         # Push the host to the Watcher queue
         watcher_record = models.WatcherRecord(
