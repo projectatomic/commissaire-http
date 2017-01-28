@@ -19,7 +19,8 @@ Routing items.
 from commissaire_http.dispatcher import Dispatcher
 from commissaire_http.router import Router
 
-from commissaire_http.handlers import clusters, hosts, networks
+from commissaire_http.handlers import (
+    clusters, hosts, networks, container_managers)
 from commissaire_http.handlers.clusters import operations
 
 #: Global HTTP router for the dispatcher
@@ -28,6 +29,7 @@ hosts._register(ROUTER)
 clusters._register(ROUTER)
 networks._register(ROUTER)
 operations._register(ROUTER)
+container_managers._register(ROUTER)
 
 #: Global HTTP dispatcher for the server
 DISPATCHER = Dispatcher(
@@ -35,6 +37,7 @@ DISPATCHER = Dispatcher(
     handler_packages=[
         'commissaire_http.handlers',
         'commissaire_http.handlers.clusters',
+        'commissaire_http.handlers.container_managers',
         'commissaire_http.handlers.clusters.operations',
         'commissaire_http.handlers.networks',
         'commissaire_http.handlers.hosts'])
