@@ -173,7 +173,7 @@ class JSONRPC_Handler(BasicHandler):
                 status = '409 Conflict'
             else:
                 message = 'Unhandled error code {}'.format(error_code)
-                self.logger.error('{}: {}'.format(message, result))
+                LOGGER.error('{}: {}'.format(message, result))
                 raise Exception(message)
             start_response(status, [('content-type', 'text/html')])
             response_body = status[4:]
