@@ -131,7 +131,7 @@ def create_host(message, bus):
     except KeyError:
         return create_jsonrpc_error(
             message, '"address" must be given in the url or in the PUT body',
-            JSONRPC_ERRORS['INVALID_PARAMETERS'])
+            JSONRPC_ERRORS['BAD_REQUEST'])
 
     # If a cluster if provided, grab it from storage
     cluster_data = {}
@@ -141,7 +141,7 @@ def create_host(message, bus):
         if not cluster:
             return create_jsonrpc_error(
                 message, 'Cluster does not exist',
-                JSONRPC_ERRORS['INVALID_PARAMETERS'])
+                JSONRPC_ERRORS['CONFLICT'])
         else:
             cluster_data = cluster.to_dict()
             LOGGER.debug('Found cluster. Data: "{}"'.format(cluster))
