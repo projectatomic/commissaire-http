@@ -63,4 +63,4 @@ class HTTPClientCertAuth(Authenticator):
         return False
 
 
-AuthenticationPlugin = HTTPClientCertAuth
+PluginClass = HTTPClientCertAuth

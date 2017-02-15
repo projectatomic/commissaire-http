@@ -100,4 +100,4 @@ class KeystonePassword(Authenticator):
         return False
 
 
-AuthenticationPlugin = KeystonePassword
+PluginClass = KeystonePassword

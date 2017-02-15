@@ -17,7 +17,8 @@
 Commissaire HTTP based application server.
 """
 import argparse
-import importlib
+
+from commissaire.util.config import import_plugin
 
 from commissaire_http.authentication import (
     AuthenticationManager, Authenticator)
@@ -38,13 +39,13 @@ def inject_authentication(plugins):
     """
     global DISPATCHER
     authn_manager = AuthenticationManager(DISPATCHER.dispatch)
-    for name in plugins:
-        module = importlib.import_module(name)
-        authentication_class = getattr(module, 'AuthenticationPlugin')
+    for module_name in plugins:
+        authentication_class = import_plugin(
+            module_name, 'commissaire_http.authentication', Authenticator)
         # NOTE: We set the app to None as we are not using the
         #       authentication_class as the dispatcher itself
         authn_manager.authenticators.append(
-            authentication_class(None, **plugins[name]))
+            authentication_class(None, **plugins[module_name]))
 
     # If there are no authentication managers defined, append the default
     # which will deny all requests

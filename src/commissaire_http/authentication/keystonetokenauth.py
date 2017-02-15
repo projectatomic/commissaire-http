@@ -84,4 +84,4 @@ class KeystoneToken(Authenticator):
         return False
 
 
-AuthenticationPlugin = KeystoneToken
+PluginClass = KeystoneToken

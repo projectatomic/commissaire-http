@@ -20,6 +20,8 @@ from unittest import mock
 
 from . import TestCase
 
+from commissaire.util.config import ConfigurationError
+
 from commissaire_http.authentication import AuthenticationManager
 from commissaire_http.server import cli
 from commissaire_http.dispatcher import Dispatcher
@@ -52,8 +54,7 @@ class TestInjectAuthentication(TestCase):
         """
         Verify cli.inject_authentication works when no kwargs are given.
         """
-        result = cli.inject_authentication(
-            {'commissaire_http.authentication.httpbasicauth': {}})
+        result = cli.inject_authentication({'httpbasicauth': {}})
         self.assertIsInstance(result, Dispatcher)
         self.assertIsInstance(result.dispatch, AuthenticationManager)
 
@@ -62,7 +63,7 @@ class TestInjectAuthentication(TestCase):
         Verify cli.inject_authentication works when kwargs are given.
         """
         result = cli.inject_authentication({
-            'commissaire_http.authentication.httpbasicauth': {
+            'httpbasicauth': {
                 'filepath': 'conf/users.json',
         }})
         self.assertIsInstance(result, Dispatcher)
@@ -73,6 +74,6 @@ class TestInjectAuthentication(TestCase):
         Verify cli.inject_authentication raises when an authenticator doesn't exist.
         """
         self.assertRaises(
-            ImportError,
+            ConfigurationError,
             cli.inject_authentication,
             {'commissaire_http.doesnotexist': {}})

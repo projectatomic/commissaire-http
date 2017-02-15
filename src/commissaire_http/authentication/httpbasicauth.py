@@ -140,4 +140,4 @@ class HTTPBasicAuth(Authenticator):
         return False
 
 
-AuthenticationPlugin = HTTPBasicAuth
+PluginClass = HTTPBasicAuth
