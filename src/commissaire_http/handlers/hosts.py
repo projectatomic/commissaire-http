@@ -224,6 +224,12 @@ def delete_host(message, bus):
                     cluster.hostset.pop(
                         cluster.hostset.index(address))
                     bus.storage.save(cluster)
+
+                    # Remove from container manager (if applicable)
+                    if cluster.container_manager:
+                        params = [cluster.container_manager, address]
+                        bus.request('container.remove_node', params=params)
+
                     # A host can only be part of one cluster so break the loop
                     break
         except _bus.RemoteProcedureCallError as error:

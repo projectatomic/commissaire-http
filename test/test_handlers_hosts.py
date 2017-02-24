@@ -224,7 +224,7 @@ class Test_hosts(TestCase):
 
     def test_delete_host_thats_in_a_cluster(self):
         """
-        Verify delete_host deletes existing host and removes it from it's cluster.
+        Verify delete_host deletes existing host and removes it from its cluster.
         """
         bus = mock.MagicMock()
         # The delete shouldn't return anything
@@ -246,6 +246,42 @@ class Test_hosts(TestCase):
         bus.storage.delete.assert_called_with(mock.ANY)
         # Verify we had a list of clusters
         bus.storage.list.assert_called_with(Clusters)
+        # Verify we did NOT have a 'container.remove_node'
+        # XXX Fragile; will break if another bus.request call is added.
+        bus.request.assert_not_called()
+        # Verify we had a cluster save
+        bus.storage.save.assert_called_with(mock.ANY)
+
+    def test_delete_host_thats_in_a_container_manager(self):
+        """
+        Verify delete_host deletes existing host and removes it from its cluster
+        and container manager.
+        """
+        bus = mock.MagicMock()
+        # The delete shouldn't return anything
+        bus.storage.delete.return_value = None
+        # The cluster response on save (which is ignored)
+        bus.storage.save.return_value = None
+        # The clusters list
+        bus.storage.list.return_value = Clusters.new(
+            clusters=[Cluster.new(
+                name='mycluster',
+                hostset=[HOST.address],
+                container_manager='test')])
+        self.assertEquals(
+            {
+                'jsonrpc': '2.0',
+                'result': [],
+                'id': '123',
+            },
+            hosts.delete_host.handler(SIMPLE_HOST_REQUEST, bus))
+
+        # Verify we had a host delete_host
+        bus.storage.delete.assert_called_with(mock.ANY)
+        # Verify we had a list of clusters
+        bus.storage.list.assert_called_with(Clusters)
+        # Verify we had a 'container.remove_node'
+        bus.request.assert_called_with('container.remove_node', params=mock.ANY)
         # Verify we had a cluster save
         bus.storage.save.assert_called_with(mock.ANY)
 
