@@ -32,8 +32,11 @@ from commissaire.models import Cluster, Clusters, Hosts, Network, ValidationErro
 # Globals reused in cluster tests
 #: Message ID
 ID = '123'
-#: Generic jsonrpc cluster by name
+#: Generic cluster model
 CLUSTER = Cluster.new(name='test')
+#: Generic cluster model with container manager
+CLUSTER_WITH_CONTAINER_MANAGER = Cluster.new(
+    name='test', container_manager=C.CONTAINER_MANAGER_OPENSHIFT)
 #: Generic jsonrpc cluster request with name
 SIMPLE_CLUSTER_REQUEST = {
     'jsonrpc': '2.0',
@@ -173,18 +176,38 @@ class Test_clusters(TestCase):
         Verify delete_cluster deletes existing clusters.
         """
         bus = mock.MagicMock()
+        # Cluster request
+        bus.storage.get_cluster.return_value = CLUSTER
         # The delete shouldn't return anything
         bus.storage.delete.return_value = None
         self.assertEquals(
             create_jsonrpc_response(ID, []),
             clusters.delete_cluster.handler(SIMPLE_CLUSTER_REQUEST, bus))
+        # Verify we did NOT have a 'container.remove_all_nodes'
+        # XXX Fragile; will break if another bus.request call is added.
+        bus.request.assert_not_called()
+
+    def test_delete_cluster_with_container_manager(self):
+        """
+        Verify delete_cluster with a container manager.
+        """
+        bus = mock.MagicMock()
+        # Cluster request
+        bus.storage.get_cluster.return_value = CLUSTER_WITH_CONTAINER_MANAGER
+        # The delete shouldn't return anything
+        bus.storage.delete.return_value = None
+        self.assertEquals(
+            create_jsonrpc_response(ID, []),
+            clusters.delete_cluster.handler(SIMPLE_CLUSTER_REQUEST, bus))
+        # Verify we had a 'container.remove_all_nodes'
+        bus.request.assert_called_with('container.remove_all_nodes', params=mock.ANY)
 
     def test_delete_cluster_that_does_not_exist(self):
         """
         Verify delete_cluster returns properly when the cluster doesn't exist.
         """
         bus = mock.MagicMock()
-        bus.storage.delete.side_effect = _bus.RemoteProcedureCallError('test')
+        bus.storage.get_cluster.side_effect = _bus.StorageLookupError('test')
         self.assertEquals(
             expected_error(ID, JSONRPC_ERRORS['NOT_FOUND']),
             clusters.delete_cluster.handler(SIMPLE_CLUSTER_REQUEST, bus))

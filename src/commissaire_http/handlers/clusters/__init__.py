@@ -204,7 +204,11 @@ def delete_cluster(message, bus):
     try:
         name = message['params']['name']
         LOGGER.debug('Attempting to delete cluster "{}"'.format(name))
-        bus.storage.delete(models.Cluster.new(name=name))
+        cluster = bus.storage.get_cluster(name)
+        if cluster.container_manager:
+            params = [cluster.container_manager]
+            bus.request('container.remove_all_nodes', params=params)
+        bus.storage.delete(cluster)
         return create_jsonrpc_response(message['id'], [])
     except _bus.StorageLookupError as error:
         return create_jsonrpc_error(
