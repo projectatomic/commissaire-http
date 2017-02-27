@@ -36,21 +36,21 @@ def _register(router):  # pragma: no cover
 
     # Networks
     router.connect(
-        R'/api/v0/container_managers/',
+        R'/api/v0/containermanagers/',
         controller=list_container_managers,
         conditions={'method': 'GET'})
     router.connect(
-        R'/api/v0/container_managers/{name}/',
+        R'/api/v0/containermanager/{name}/',
         requirements={'name': ROUTING_RX_PARAMS['name']},
         controller=get_container_manager,
         conditions={'method': 'GET'})
     router.connect(
-        R'/api/v0/container_managers/{name}/',
+        R'/api/v0/containermanager/{name}/',
         requirements={'name': ROUTING_RX_PARAMS['name']},
         controller=create_container_manager,
         conditions={'method': 'PUT'})
     router.connect(
-        R'/api/v0/container_managers/{name}/',
+        R'/api/v0/containermanager/{name}/',
         requirements={'name': ROUTING_RX_PARAMS['name']},
         controller=delete_container_manager,
         conditions={'method': 'DELETE'})
