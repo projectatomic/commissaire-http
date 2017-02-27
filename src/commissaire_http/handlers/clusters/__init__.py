@@ -385,6 +385,12 @@ def delete_cluster_member(message, bus):
             idx = cluster.hostset.index(host)
             cluster.hostset.pop(idx)
             bus.storage.save(cluster)
+
+            # Remove from container manager (if applicable)
+            if cluster.container_manager:
+                params = [cluster.container_manager, host]
+                bus.request('container.remove_node', params=params)
+
         return create_jsonrpc_response(message['id'], [])
     except Exception as error:
         return create_jsonrpc_error(

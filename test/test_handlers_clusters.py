@@ -354,3 +354,26 @@ class Test_clusters(TestCase):
         self.assertEquals(
             create_jsonrpc_response(ID, []),
             clusters.delete_cluster_member.handler(CHECK_CLUSTER_REQUEST, bus))
+
+        # Verify we did NOT have a 'container.remove_node'
+        # XXX Fragile; will break if another bus.request call is added.
+        bus.request.assert_not_called()
+
+    def test_delete_cluster_member_with_container_manager(self):
+        """
+        Verify that delete_cluster_member handles a container manager
+        """
+        bus = mock.MagicMock()
+        cluster = Cluster.new(
+            name='test', hostset=['127.0.0.1'],
+            container_manager=C.CONTAINER_MANAGER_OPENSHIFT)
+
+        bus.storage.get_cluster.return_value = cluster
+        bus.storage.save.return_value = None
+
+        self.assertEquals(
+            create_jsonrpc_response(ID, []),
+            clusters.delete_cluster_member.handler(CHECK_CLUSTER_REQUEST, bus))
+
+        # Verify we had a 'container.remove_node'
+        bus.request.assert_called_with('container.remove_node', params=mock.ANY)
