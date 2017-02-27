@@ -343,6 +343,28 @@ class Test_hosts(TestCase):
             create_jsonrpc_response(ID, host_status.to_dict()),
             hosts.get_host_status.handler(SIMPLE_HOST_REQUEST, bus))
 
+    def test_get_host_status_with_container_manager(self):
+        """
+        Verify get_host status includes container manager status
+        """
+        bus = mock.MagicMock()
+        bus.storage.get_host.return_value = HOST
+
+        cluster = Cluster.new(
+            name='test', hostset=['127.0.0.1'],
+            container_manager='trivial')
+        bus.storage.list.return_value = Clusters.new(clusters=[cluster])
+
+        # XXX Fragile; will break if another bus.request call is added.
+        bus.request.return_value = {'status': 'ok'}
+
+        host_status = HostStatus.new(
+            host={'last_check': '', 'status': ''}, type='host_only',
+            container_manager={'status': 'ok'})
+        self.assertEquals(
+            create_jsonrpc_response(ID, host_status.to_dict()),
+            hosts.get_host_status.handler(SIMPLE_HOST_REQUEST, bus))
+
     def test_get_host_status_that_doesnt_exist(self):
         """
         Verify get_host_status responds with a 404 error on missing hosts.

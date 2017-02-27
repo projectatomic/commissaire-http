@@ -288,11 +288,34 @@ def get_host_status(message, bus):
     try:
         address = message['params']['address']
         host = bus.storage.get_host(address)
+        container_manager = {}
+
+        # Find the host's container manager status (if applicable)
+        container = bus.storage.list(models.Clusters)
+        for cluster in container.clusters:
+            if address in cluster.hostset:
+                if cluster.container_manager:
+                    try:
+                        params = [cluster.container_manager, address]
+                        container_manager = bus.request(
+                            'container.get_node_status', params=params)
+                    except _bus.RemoteProcedureCallError as error:
+                        # XXX Make ContainerManagerError a subclass of
+                        #     RemoteProcedureCallError so the BusMixin
+                        #     logic can raise it on the client side.
+                        #     (cf. StorageLookupError)
+                        if error.data.get('exception') != 'ContainerManagerError':  # noqa
+                            raise error
+
+                # A host can only be part of one cluster so break the loop.
+                break
+
         status = models.HostStatus.new(
             host={
                 'last_check': host.last_check,
                 'status': host.status,
             },
+            container_manager=container_manager,
             # TODO: Update when we add other types.
             type='host_only')
 
