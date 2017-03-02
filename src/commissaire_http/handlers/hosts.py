@@ -299,13 +299,11 @@ def get_host_status(message, bus):
                         params = [cluster.container_manager, address]
                         container_manager = bus.request(
                             'container.get_node_status', params=params)
-                    except _bus.RemoteProcedureCallError as error:
-                        # XXX Make ContainerManagerError a subclass of
-                        #     RemoteProcedureCallError so the BusMixin
-                        #     logic can raise it on the client side.
-                        #     (cf. StorageLookupError)
-                        if error.data.get('exception') != 'ContainerManagerError':  # noqa
-                            raise error
+                    except _bus.ContainerManagerError as error:
+                        # If we fail to get the container manager's
+                        # status for the host, leave that part of the
+                        # status structure empty.
+                        pass
 
                 # A host can only be part of one cluster so break the loop.
                 break
