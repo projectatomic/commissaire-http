@@ -169,6 +169,8 @@ class JSONRPC_Handler(BasicHandler):
                 status = '400 Bad Request'
             elif error_code == JSONRPC_ERRORS['NOT_FOUND']:
                 status = '404 Not Found'
+            elif error_code == JSONRPC_ERRORS['METHOD_NOT_ALLOWED']:
+                status = '405 Method Not Allowed'
             elif error_code == JSONRPC_ERRORS['CONFLICT']:
                 status = '409 Conflict'
             else:
