@@ -90,11 +90,10 @@ class Test_clusters(TestCase):
         bus = mock.MagicMock()
         # Cluster request
         bus.storage.get_cluster.return_value = CLUSTER
-        # Hosts requests
-        bus.storage.list.return_value = Hosts.new(hosts=[])
         self.assertEquals(
             create_jsonrpc_response(ID, {
                 'name': 'test',
+                'hostset': [],
                 'hosts': {'available': 0, 'total': 0, 'unavailable': 0},
                 'network': 'default',
                 'status': C.CLUSTER_STATUS_OK,
