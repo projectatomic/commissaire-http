@@ -244,11 +244,19 @@ class Test_clusters(TestCase):
         bus.storage.get_cluster.return_value = cluster
         bus.storage.save.return_value = cluster
 
-        result = clusters.update_cluster_members.handler({
+        message = {
             'jsonrpc': '2.0',
-            'id': '123',
-            'params': {'name': 'test', 'old': ['127.0.0.1'], 'new': []}
-        }, bus)
+            'id': ID,
+            'params': {
+                'name': 'test',
+                'old': ['127.0.0.1'],
+                'new': []
+            }
+        }
+
+        with mock.patch('commissaire_http.handlers.clusters.'
+                        'update_new_cluster_member_status') as uncms:
+            result = clusters.update_cluster_members.handler(message, bus)
 
         self.assertEquals([], result['result']['hostset'])
 
@@ -276,7 +284,9 @@ class Test_clusters(TestCase):
             }
         }
 
-        result = clusters.update_cluster_members.handler(message, bus)
+        with mock.patch('commissaire_http.handlers.clusters.'
+                        'update_new_cluster_member_status') as uncms:
+            result = clusters.update_cluster_members.handler(message, bus)
 
         self.assertEquals(
             result, expected_error(ID, JSONRPC_ERRORS['METHOD_NOT_ALLOWED']))
@@ -304,7 +314,9 @@ class Test_clusters(TestCase):
             }
         }
 
-        result = clusters.update_cluster_members.handler(message, bus)
+        with mock.patch('commissaire_http.handlers.clusters.'
+                        'update_new_cluster_member_status') as uncms:
+            result = clusters.update_cluster_members.handler(message, bus)
 
         # Check the 1st positional argument.
         args, kwargs = bus.storage.get_many.call_args
@@ -399,9 +411,13 @@ class Test_clusters(TestCase):
         bus.storage.save.return_value = None
 
         expected_response = create_jsonrpc_response(ID, ['127.0.0.1'])
-        self.assertEquals(
-            expected_response,
-            clusters.add_cluster_member.handler(CHECK_CLUSTER_REQUEST, bus))
+
+        with mock.patch('commissaire_http.handlers.clusters.'
+                        'update_new_cluster_member_status') as uncms:
+            actual_response = clusters.add_cluster_member.handler(
+                CHECK_CLUSTER_REQUEST, bus)
+
+        self.assertEquals(actual_response, expected_response)
 
     def test_add_cluster_member_with_various_status(self):
         """
@@ -428,8 +444,10 @@ class Test_clusters(TestCase):
             host.status = status
             cluster.hostset = []
 
-            actual_result = clusters.add_cluster_member.handler(
-                CHECK_CLUSTER_REQUEST, bus)
+            with mock.patch('commissaire_http.handlers.clusters.'
+                            'update_new_cluster_member_status') as uncms:
+                actual_result = clusters.add_cluster_member.handler(
+                    CHECK_CLUSTER_REQUEST, bus)
 
             if expect_to_add:
                 expected_result = create_jsonrpc_response(ID, ['127.0.0.1'])
@@ -476,3 +494,32 @@ class Test_clusters(TestCase):
 
         # Verify we had a 'container.remove_node'
         bus.request.assert_called_with('container.remove_node', params=mock.ANY)
+
+    def test_update_new_cluster_member_status(self):
+        """
+        Verify update_new_cluster_member_status works as expected
+        """
+        bus = mock.MagicMock()
+        hosts = (
+            Host.new(address='192.168.1.1'),
+            Host.new(address='192.168.1.2')
+        )
+        cluster = Cluster.new(name='test')
+
+        cluster.container_manager = None
+        clusters.update_new_cluster_member_status(bus, cluster, *hosts)
+        bus.request.assert_not_called()
+        for n in range(len(hosts)):
+            self.assertEquals(hosts[n].status, 'disassociated')
+        bus.storage.save_many.assert_called_once_with(hosts)
+
+        bus.reset_mock()
+
+        cluster.container_manager = C.CONTAINER_MANAGER_OPENSHIFT
+        clusters.update_new_cluster_member_status(bus, cluster, *hosts)
+        for n in range(len(hosts)):
+            bus.request.assert_any_call(
+                'container.register_node',
+                params=[C.CONTAINER_MANAGER_OPENSHIFT, hosts[n].address])
+            self.assertEquals(hosts[n].status, 'active')
+        bus.storage.save_many.assert_called_once_with(hosts)

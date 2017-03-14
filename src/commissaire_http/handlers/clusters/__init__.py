@@ -109,6 +109,38 @@ def host_suitable_for_cluster(host):
     return (host.status in ('active', 'disassociated'))
 
 
+def update_new_cluster_member_status(bus, cluster, *hosts):
+    """
+    Call this helper function when adding new hosts to a cluster.  If
+    applicable, it will register each host with the cluster's container
+    manager.  Then it will update the host status accordingly and save
+    the model(s) to permanent storage.
+
+    :param bus: Bus instance
+    :type bus: commissaire_http.bus.Bus
+    :param cluster: A Cluster model instance
+    :type cluster: commissaire.models.Cluster
+    :param hosts: Tuple of Host model instances
+    :type hosts: (commissaire.models.Host, ...)
+    """
+    for host in hosts:
+        try:
+            host.status = 'disassociated'
+            if cluster.container_manager:
+                bus.request(
+                    'container.register_node',
+                    params=[cluster.container_manager, host.address])
+                host.status = 'active'
+        except Exception as error:
+            LOGGER.warn(
+                'Unable to register {} to container manager "{}": {}'.format(
+                    host.address, cluster.container_manager, error.args[0]))
+            raise error
+
+    # Save the updated host models.
+    bus.storage.save_many(hosts)
+
+
 @JSONRPC_Handler
 def list_clusters(message, bus):
     """
@@ -322,6 +354,11 @@ def update_cluster_members(message, bus):
     #        with the etcd 'modifiedIndex'.  Deferring for now.
     cluster.hostset = list(new_hosts)
     saved_cluster = bus.storage.save(cluster)
+
+    # Register newly added hosts with the cluster's container manager
+    # (if applicable), and update their status.
+    update_new_cluster_member_status(bus, cluster, *list_of_hosts)
+
     # XXX Using to_dict() instead of to_dict_safe() to include hostset.
     return create_jsonrpc_response(message['id'], saved_cluster.to_dict())
 
@@ -393,6 +430,10 @@ def add_cluster_member(message, bus):
         if host_suitable_for_cluster(host):
             cluster.hostset.append(host.address)
             bus.storage.save(cluster)
+
+            # Register new host with the cluster's container manager
+            # (if applicable), and update its status.
+            update_new_cluster_member_status(bus, cluster, host)
         else:
             msg = (
                 'Host {} (status: {}) not ready to join cluster '
