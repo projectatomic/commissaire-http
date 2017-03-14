@@ -95,6 +95,20 @@ def _register(router):
     return router
 
 
+def host_suitable_for_cluster(host):
+    """
+    Captures the policy for adding a host to a cluster.  Returns true if the
+    host is suitable, false if the host should be rejected.
+
+    :param host: A Host model instance
+    :type host: commissaire.models.Host
+    :returns: Whether to accept the host into a cluster
+    :rtype: bool
+    """
+    # Indicates the host has successfully bootstrapped.
+    return (host.status in ('active', 'disassociated'))
+
+
 @JSONRPC_Handler
 def list_clusters(message, bus):
     """
@@ -282,9 +296,25 @@ def update_cluster_members(message, bus):
         LOGGER.error(msg)
         return create_jsonrpc_error(message, msg, JSONRPC_ERRORS['CONFLICT'])
 
-    # FIXME: Need input validation.  For each new host,
-    #        - Does the host exist at /commissaire/hosts/{IP}?
+    # FIXME: Need more input validation.  For each new host,
     #        - Does the host already belong to another cluster?
+
+    # Only verify *new* hosts are suitable to add to the cluster.
+    # Rejecting existing cluster members would be surprising to users.
+    actual_new_hosts = new_hosts.difference(old_hosts)
+    LOGGER.debug(
+        'Checking status of new hosts (ignoring existing): '
+        '{}'.format(', '.join(actual_new_hosts)))
+    list_of_hosts = bus.storage.get_many(
+        [models.Host.new(address=x) for x in actual_new_hosts])
+    hosts_not_ready = [host.address for host in list_of_hosts
+                       if not host_suitable_for_cluster(host)]
+    if hosts_not_ready:
+        msg = 'Hosts not ready to join cluster "{}": {}'.format(
+            name, ','.join(hosts_not_ready))
+        LOGGER.error(msg)
+        return create_jsonrpc_error(
+            message, msg, JSONRPC_ERRORS['METHOD_NOT_ALLOWED'])
 
     # FIXME: Should guard against races here, since we're fetching
     #        the cluster record and writing it back with some parts
@@ -338,27 +368,41 @@ def add_cluster_member(message, bus):
     :rtype: dict
     """
     try:
-        host = message['params']['host']
+        address = message['params']['host']
         name = message['params']['name']
-        cluster = bus.storage.get_cluster(name)
-
-        if host not in cluster.hostset:
-            # FIXME: Need input validation.
-            #        - Does the host exist at /commissaire/hosts/{IP}?
-            #        - Does the host already belong to another cluster?
-
-            # FIXME: Should guard against races here, since we're fetching
-            #        the cluster record and writing it back with some parts
-            #        unmodified.  Use either locking or a conditional write
-            #        with the etcd 'modifiedIndex'.  Deferring for now.
-            cluster.hostset.append(host)
-            bus.storage.save(cluster)
-
-        # Return back the host in a list
-        return create_jsonrpc_response(message['id'], [host])
-    except Exception as error:
+    except KeyError as error:
         return create_jsonrpc_error(
-            message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
+            message, error, JSONRPC_ERRORS['BAD_REQUEST'])
+
+    try:
+        host = bus.storage.get_host(address)
+        cluster = bus.storage.get_cluster(name)
+    except _bus.StorageLookupError as error:
+        return create_jsonrpc_error(
+            message, error, JSONRPC_ERRORS['NOT_FOUND'])
+
+    if host.address not in cluster.hostset:
+        # FIXME: Need more input validation.
+        #        - Does the host already belong to another cluster?
+
+        # FIXME: Should guard against races here, since we're fetching
+        #        the cluster record and writing it back with some parts
+        #        unmodified.  Use either locking or a conditional write
+        #        with the etcd 'modifiedIndex'.  Deferring for now.
+
+        if host_suitable_for_cluster(host):
+            cluster.hostset.append(host.address)
+            bus.storage.save(cluster)
+        else:
+            msg = (
+                'Host {} (status: {}) not ready to join cluster '
+                '"{}"'.format(host.address, host.status, cluster.name))
+            LOGGER.error(msg)
+            return create_jsonrpc_error(
+                message, msg, JSONRPC_ERRORS['METHOD_NOT_ALLOWED'])
+
+    # Return back the host in a list
+    return create_jsonrpc_response(message['id'], [host.address])
 
 
 @JSONRPC_Handler

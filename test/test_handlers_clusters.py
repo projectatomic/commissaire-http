@@ -26,7 +26,8 @@ from commissaire import constants as C
 from commissaire import bus as _bus
 from commissaire.constants import JSONRPC_ERRORS
 from commissaire_http.handlers import create_jsonrpc_response, clusters
-from commissaire.models import Cluster, Clusters, Hosts, Network, ValidationError
+from commissaire.models import (
+    Cluster, Clusters, Host, Hosts, Network, ValidationError)
 
 
 # Globals reused in cluster tests
@@ -251,6 +252,67 @@ class Test_clusters(TestCase):
 
         self.assertEquals([], result['result']['hostset'])
 
+    def test_update_cluster_members_with_failed_new_host(self):
+        """
+        Verify that update_cluster_members rejects a failed host
+        """
+        bus = mock.MagicMock()
+        old_hostset = ['192.168.1.1']
+        new_hostset = old_hostset + ['192.168.1.2']
+        cluster = Cluster.new(name='test', hostset=old_hostset)
+        hosts = [Host.new(address=new_hostset[0], status='active'),
+                 Host.new(address=new_hostset[1], status='failed')]
+
+        bus.storage.get_cluster.return_value = cluster
+        bus.storage.get_many.return_value = hosts
+
+        message = {
+            'jsonrpc': '2.0',
+            'id': ID,
+            'params': {
+                'name': 'test',
+                'old': old_hostset,
+                'new': new_hostset
+            }
+        }
+
+        result = clusters.update_cluster_members.handler(message, bus)
+
+        self.assertEquals(
+            result, expected_error(ID, JSONRPC_ERRORS['METHOD_NOT_ALLOWED']))
+
+    def test_update_cluster_members_with_failed_old_host(self):
+        """
+        Verify that update_cluster_members keeps members regardless of status
+        """
+        bus = mock.MagicMock()
+        old_hostset = ['192.168.1.1']
+        new_hostset = old_hostset + ['192.168.1.2']
+        cluster = Cluster.new(name='test', hostset=old_hostset)
+        hosts = [Host.new(address=new_hostset[1], status='active')]
+
+        bus.storage.get_cluster.return_value = cluster
+        bus.storage.get_many.return_value = hosts
+
+        message = {
+            'jsonrpc': '2.0',
+            'id': ID,
+            'params': {
+                'name': 'test',
+                'old': old_hostset,
+                'new': new_hostset
+            }
+        }
+
+        result = clusters.update_cluster_members.handler(message, bus)
+
+        # Check the 1st positional argument.
+        args, kwargs = bus.storage.get_many.call_args
+        list_of_host_models = args[0]
+        self.assertEquals(
+            [x.address for x in list_of_host_models],
+            ['192.168.1.2'])
+
     def test_update_cluster_members_with_conflicting_input(self):
         """
         Verify that update_cluster_members handles conflicting input.
@@ -331,6 +393,8 @@ class Test_clusters(TestCase):
         cluster = Cluster.new(
             name='test', hostset=[])
 
+        bus.storage.get_host.return_value = Host.new(
+            address='127.0.0.1', status='disassociated')
         bus.storage.get_cluster.return_value = cluster
         bus.storage.save.return_value = None
 
@@ -338,6 +402,42 @@ class Test_clusters(TestCase):
         self.assertEquals(
             expected_response,
             clusters.add_cluster_member.handler(CHECK_CLUSTER_REQUEST, bus))
+
+    def test_add_cluster_member_with_various_status(self):
+        """
+        Verify that add_cluster_member rejects hosts with bad status
+        """
+        bus = mock.MagicMock()
+
+        host = Host.new(address='127.0.0.1')
+        cluster = Cluster.new(name='test')
+
+        bus.storage.get_host.return_value = host
+        bus.storage.get_cluster.return_value = cluster
+        bus.storage.save.return_value = None
+
+        host_statuses = [
+            ('investigating', False),
+            ('bootstrapping', False),
+            ('active', True),
+            ('disassociated', True),
+            ('falied', False)
+        ]
+
+        for status, expect_to_add in host_statuses:
+            host.status = status
+            cluster.hostset = []
+
+            actual_result = clusters.add_cluster_member.handler(
+                CHECK_CLUSTER_REQUEST, bus)
+
+            if expect_to_add:
+                expected_result = create_jsonrpc_response(ID, ['127.0.0.1'])
+            else:
+                expected_result = expected_error(
+                    ID, JSONRPC_ERRORS['METHOD_NOT_ALLOWED'])
+
+            self.assertEquals(actual_result, expected_result)
 
     def test_delete_cluster_member_with_valid_member(self):
         """
