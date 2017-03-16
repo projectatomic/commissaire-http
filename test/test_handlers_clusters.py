@@ -268,8 +268,8 @@ class Test_clusters(TestCase):
         old_hostset = ['192.168.1.1']
         new_hostset = old_hostset + ['192.168.1.2']
         cluster = Cluster.new(name='test', hostset=old_hostset)
-        hosts = [Host.new(address=new_hostset[0], status='active'),
-                 Host.new(address=new_hostset[1], status='failed')]
+        hosts = [Host.new(address=new_hostset[0], status=C.HOST_STATUS_ACTIVE),
+                 Host.new(address=new_hostset[1], status=C.HOST_STATUS_FAILED)]
 
         bus.storage.get_cluster.return_value = cluster
         bus.storage.get_many.return_value = hosts
@@ -299,7 +299,7 @@ class Test_clusters(TestCase):
         old_hostset = ['192.168.1.1']
         new_hostset = old_hostset + ['192.168.1.2']
         cluster = Cluster.new(name='test', hostset=old_hostset)
-        hosts = [Host.new(address=new_hostset[1], status='active')]
+        hosts = [Host.new(address=new_hostset[1], status=C.HOST_STATUS_ACTIVE)]
 
         bus.storage.get_cluster.return_value = cluster
         bus.storage.get_many.return_value = hosts
@@ -406,7 +406,7 @@ class Test_clusters(TestCase):
             name='test', hostset=[])
 
         bus.storage.get_host.return_value = Host.new(
-            address='127.0.0.1', status='disassociated')
+            address='127.0.0.1', status=C.HOST_STATUS_DISASSOCIATED)
         bus.storage.get_cluster.return_value = cluster
         bus.storage.save.return_value = None
 
@@ -433,11 +433,11 @@ class Test_clusters(TestCase):
         bus.storage.save.return_value = None
 
         host_statuses = [
-            ('investigating', False),
-            ('bootstrapping', False),
-            ('active', True),
-            ('disassociated', True),
-            ('falied', False)
+            (C.HOST_STATUS_INVESTIGATING, False),
+            (C.HOST_STATUS_BOOTSTRAPPING, False),
+            (C.HOST_STATUS_ACTIVE, True),
+            (C.HOST_STATUS_DISASSOCIATED, True),
+            (C.HOST_STATUS_FAILED, False)
         ]
 
         for status, expect_to_add in host_statuses:
@@ -510,7 +510,7 @@ class Test_clusters(TestCase):
         clusters.update_new_cluster_member_status(bus, cluster, *hosts)
         bus.request.assert_not_called()
         for n in range(len(hosts)):
-            self.assertEquals(hosts[n].status, 'disassociated')
+            self.assertEquals(hosts[n].status, C.HOST_STATUS_DISASSOCIATED)
         bus.storage.save_many.assert_called_once_with(hosts)
 
         bus.reset_mock()
@@ -521,5 +521,5 @@ class Test_clusters(TestCase):
             bus.request.assert_any_call(
                 'container.register_node',
                 params=[C.CONTAINER_MANAGER_OPENSHIFT, hosts[n].address])
-            self.assertEquals(hosts[n].status, 'active')
+            self.assertEquals(hosts[n].status, C.HOST_STATUS_ACTIVE)
         bus.storage.save_many.assert_called_once_with(hosts)

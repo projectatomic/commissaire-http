@@ -106,7 +106,9 @@ def host_suitable_for_cluster(host):
     :rtype: bool
     """
     # Indicates the host has successfully bootstrapped.
-    return (host.status in ('active', 'disassociated'))
+    return (host.status in (
+        C.HOST_STATUS_ACTIVE,
+        C.HOST_STATUS_DISASSOCIATED))
 
 
 def update_new_cluster_member_status(bus, cluster, *hosts):
@@ -125,12 +127,12 @@ def update_new_cluster_member_status(bus, cluster, *hosts):
     """
     for host in hosts:
         try:
-            host.status = 'disassociated'
+            host.status = C.HOST_STATUS_DISASSOCIATED
             if cluster.container_manager:
                 bus.request(
                     'container.register_node',
                     params=[cluster.container_manager, host.address])
-                host.status = 'active'
+                host.status = C.HOST_STATUS_ACTIVE
         except Exception as error:
             LOGGER.warn(
                 'Unable to register {} to container manager "{}": {}'.format(
@@ -180,7 +182,7 @@ def get_cluster(message, bus):
     for host_address in cluster.hostset:
         host = bus.storage.get_host(host_address)
         total += 1
-        if host.status == 'active':
+        if host.status == C.HOST_STATUS_ACTIVE:
             available += 1
         else:
             unavailable += 1
