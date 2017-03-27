@@ -112,7 +112,7 @@ class CommissaireRequestHandler(WSGIRequestHandler):
     Commissaire version of the WSGIRequestHandler.
     """
     #: The software version of the server
-    server_version = 'Commissaire/0.0.3'
+    server_version = 'Commissaire/0.0.4'
 
     def get_environ(self):
         """
