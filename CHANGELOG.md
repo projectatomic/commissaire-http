@@ -1,3 +1,14 @@
+# commissaire-http v0.0.3
+```
+* 087c646: Use new host status constants.
+* 1277d49: handlers: Register new cluster members with container manager.
+* be5a344: handlers: Adding hosts to cluster is contingent on status.
+* 92a64a3: Fix test_get_cluster().
+* 5ab637b: handlers: Map 'METHOD_NOT_ALLOWED' error to HTTP status 405.
+* 14d89f7: handlers: Catch ContainerManagerError by name.
+* 519c041: Post-release version bump.
+```
+
 # commissaire-http v0.0.2
 ```
 * cf42758: handlers: Fix container manager routes.
