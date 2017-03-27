@@ -196,7 +196,8 @@ def get_cluster(message, bus):
     cluster.hosts['available'] = available
     cluster.hosts['unavailable'] = unavailable
 
-    return create_jsonrpc_response(message['id'], cluster.to_dict_with_hosts())
+    return create_jsonrpc_response(
+        message['id'], cluster.to_dict(expose=['hosts']))
 
 
 @JSONRPC_Handler
