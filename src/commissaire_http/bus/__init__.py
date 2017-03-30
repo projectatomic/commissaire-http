@@ -88,7 +88,7 @@ class Bus(BusMixin):
             queue.exchange = self._exchange
             queue = queue.bind(self._channel)
             self._queues.append(queue)
-            self.logger.debug('Created queue {}'.format(queue.as_dict()))
+            self.logger.debug('Created queue %s', queue.as_dict())
 
         # Create producer for publishing on topics
         self.producer = Producer(self._channel, self._exchange)
@@ -109,14 +109,14 @@ class Bus(BusMixin):
         :param kwargs: Keyword arguments to pass to SimpleQueue
         :type kwargs: dict
         """
-        self.logger.debug('Sending response for message id "{}"'.format(id))
+        self.logger.debug('Sending response for message id "%s"', id)
         send_queue = self.connection.SimpleQueue(queue_name, **kwargs)
         jsonrpc_msg = {
             'jsonrpc': "2.0",
             'id': id,
             'result': payload,
         }
-        self.logger.debug('jsonrpc msg: {}'.format(jsonrpc_msg))
+        self.logger.debug('jsonrpc msg: %s', jsonrpc_msg)
         send_queue.put(jsonrpc_msg)
-        self.logger.debug('Sent response for message id "{}"'.format(id))
+        self.logger.debug('Sent response for message id "%s"', id)
         send_queue.close()

@@ -68,8 +68,9 @@ class KeystoneToken(Authenticator):
                 data=json.dumps(body),
                 headers=headers)
         except requests.exceptions.BaseHTTPError as error:
-            self.logger.error('Could not reach {}. Denying access. {}: {}'
-                              .format(self.url, type(error), error))
+            self.logger.error(
+                'Could not reach %s. Denying access. %s: %s',
+                self.url, type(error), error)
             return False
 
         subject_token_name = 'X-Subject-Token'

@@ -107,8 +107,9 @@ def get_host(message, bus):
         host = bus.storage.get_host(address)
         return create_jsonrpc_response(message['id'], host.to_dict_safe())
     except _bus.RemoteProcedureCallError as error:
-        LOGGER.debug('Client requested a non-existant host: "{}"'.format(
-            message['params']['address']))
+        LOGGER.debug(
+            'Client requested a non-existant host: "%s"',
+            message['params']['address'])
         return create_jsonrpc_error(
             message, error, JSONRPC_ERRORS['NOT_FOUND'])
 
@@ -125,7 +126,7 @@ def create_host(message, bus):
     :returns: A jsonrpc structure.
     :rtype: dict
     """
-    LOGGER.debug('create_host params: "{}"'.format(message['params']))
+    LOGGER.debug('create_host params: "%s"', message['params'])
     try:
         address = message['params']['address']
     except KeyError:
@@ -144,10 +145,10 @@ def create_host(message, bus):
                 JSONRPC_ERRORS['CONFLICT'])
         else:
             cluster_data = cluster.to_dict()
-            LOGGER.debug('Found cluster. Data: "{}"'.format(cluster))
+            LOGGER.debug('Found cluster. Data: "%s"', cluster)
     try:
         host = bus.storage.get_host(address)
-        LOGGER.debug('Host "{}" already exisits.'.format(address))
+        LOGGER.debug('Host "%s" already exisits.', address)
 
         # Verify the keys match
         if host.ssh_priv_key != message['params'].get('ssh_priv_key', ''):
@@ -156,8 +157,8 @@ def create_host(message, bus):
 
         # Verify the host is in the cluster if it is expected
         if cluster_name and address not in cluster.hostset:
-            LOGGER.debug('Host "{}" is not in cluster "{}"'.format(
-                address, cluster_name))
+            LOGGER.debug(
+                'Host "%s" is not in cluster "%s"', address, cluster_name)
             return create_jsonrpc_error(
                 message, 'Host not in cluster', JSONRPC_ERRORS['CONFLICT'])
 
@@ -165,16 +166,16 @@ def create_host(message, bus):
         return create_jsonrpc_response(message['id'], host.to_dict_safe())
 
     except _bus.RemoteProcedureCallError as error:
-        LOGGER.debug('Brand new host "{}" being created.'.format(
-            message['params']['address']))
+        LOGGER.debug(
+            'Brand new host "%s" being created.', message['params']['address'])
 
     # Save the host to the cluster if it isn't already there
     if cluster_name:
         if address not in cluster.hostset:
             cluster.hostset.append(address)
             bus.storage.save(cluster)
-            LOGGER.debug('Saved host "{}" to cluster "{}"'.format(
-                address, cluster_name))
+            LOGGER.debug(
+                'Saved host "%s" to cluster "%s"', address, cluster_name)
 
     try:
         host = bus.storage.save(models.Host.new(**message['params']))
@@ -210,7 +211,7 @@ def delete_host(message, bus):
     """
     try:
         address = message['params']['address']
-        LOGGER.debug('Attempting to delete host "{}"'.format(address))
+        LOGGER.debug('Attempting to delete host "%s"', address)
         bus.storage.delete(models.Host.new(address=address))
         # TODO: kick off service job to remove the host?
 
@@ -219,8 +220,9 @@ def delete_host(message, bus):
             container = bus.storage.list(models.Clusters)
             for cluster in container.clusters:
                 if address in cluster.hostset:
-                    LOGGER.info('Removing host "{}" from cluster "{}"'.format(
-                        address, cluster.name))
+                    LOGGER.info(
+                        'Removing host "%s" from cluster "%s"',
+                        address, cluster.name)
                     cluster.hostset.pop(
                         cluster.hostset.index(address))
                     bus.storage.save(cluster)
@@ -233,15 +235,15 @@ def delete_host(message, bus):
                     # A host can only be part of one cluster so break the loop
                     break
         except _bus.RemoteProcedureCallError as error:
-            LOGGER.info('{} not part of a cluster.'.format(address))
+            LOGGER.info('%s not part of a cluster.', address)
 
         return create_jsonrpc_response(message['id'], [])
     except _bus.RemoteProcedureCallError as error:
         return create_jsonrpc_error(
             message, error, JSONRPC_ERRORS['NOT_FOUND'])
     except Exception as error:
-        LOGGER.debug('Error deleting host: {}: {}'.format(
-            type(error), error))
+        LOGGER.debug(
+            'Error deleting host: %s: %s', type(error), error)
         return create_jsonrpc_error(
             message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
 
@@ -267,8 +269,8 @@ def get_hostcreds(message, bus):
         }
         return create_jsonrpc_response(message['id'], creds)
     except _bus.RemoteProcedureCallError as error:
-        LOGGER.debug('Client requested a non-existant host: "{}"'.format(
-            address))
+        LOGGER.debug(
+            'Client requested a non-existant host: "%s"', address)
         return create_jsonrpc_error(
             message, error, JSONRPC_ERRORS['NOT_FOUND'])
 
@@ -317,8 +319,8 @@ def get_host_status(message, bus):
             # TODO: Update when we add other types.
             type='host_only')
 
-        LOGGER.debug('Status for host "{0}": "{1}"'.format(
-            host.address, status.to_json_safe()))
+        LOGGER.debug(
+            'Status for host "%s": "%s"', host.address, status.to_json_safe())
 
         return create_jsonrpc_response(message['id'], status.to_dict_safe())
     except _bus.RemoteProcedureCallError as error:
@@ -326,8 +328,8 @@ def get_host_status(message, bus):
             message, error, JSONRPC_ERRORS['NOT_FOUND'])
     except Exception as error:
         LOGGER.debug(
-            'Host Status exception caught for {0}: {1}:{2}'.format(
-                address, type(error), error))
+            'Host Status exception caught for %s: %s:%s',
+            address, type(error), error)
         return create_jsonrpc_error(
             message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
 
@@ -344,12 +346,12 @@ def _does_cluster_exist(bus, cluster_name):
     :returns: The found Cluster instance or None
     :rtype: mixed
     """
-    LOGGER.debug('Checking on cluster "{}"'.format(cluster_name))
+    LOGGER.debug('Checking on cluster "%s"', cluster_name)
     try:
         cluster = bus.storage.get_cluster(cluster_name)
-        LOGGER.debug('Found cluster: "{}"'.format(cluster))
+        LOGGER.debug('Found cluster: "%s"', cluster)
         return cluster
     except _bus.StorageLookupError as error:
         LOGGER.warn(
-            'create_host could not find cluster "{}"'.format(cluster_name))
+            'create_host could not find cluster "%s"', cluster_name)
         return None

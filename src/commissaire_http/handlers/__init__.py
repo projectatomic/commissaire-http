@@ -79,7 +79,7 @@ def get_params(environ):
                 param_dict.update(more_params)
             except (ValueError, json.decoder.JSONDecodeError) as error:
                 LOGGER.error(
-                    'Unable to read "wsgi.input": {}'.format(error))
+                    'Unable to read "wsgi.input": %s', error)
                 return None
     else:
         param_dict.update(parse_query_string(environ.get('QUERY_STRING')))
@@ -156,12 +156,12 @@ class JSONRPC_Handler(BasicHandler):
             'params': param_dict
         }
         LOGGER.debug(
-            'Request transformed to "{}"'.format(jsonrpc_message))
+            'Request transformed to "%s"', jsonrpc_message)
 
         result = self.handler(jsonrpc_message, bus)
 
         handler_name = self.handler.__name__
-        LOGGER.debug('Handler {} returned "{}"'.format(handler_name, result))
+        LOGGER.debug('Handler %s returned "%s"', handler_name, result)
 
         if 'error' in result.keys():
             error_code = result['error']['code']
@@ -175,7 +175,7 @@ class JSONRPC_Handler(BasicHandler):
                 status = '409 Conflict'
             else:
                 message = 'Unhandled error code {}'.format(error_code)
-                LOGGER.error('{}: {}'.format(message, result))
+                LOGGER.error('%s: %s', message, result)
                 raise Exception(message)
             start_response(status, [('content-type', 'text/html')])
             response_body = status[4:]
@@ -193,7 +193,7 @@ class JSONRPC_Handler(BasicHandler):
 
         else:
             message = 'Malformed JSON-RPC response message'
-            self.logger.error('{}: {}'.format(message, result))
+            self.logger.error('%s: %s', message, result)
             raise Exception(message)
 
         return [bytes(response_body, 'utf8')]
@@ -212,11 +212,11 @@ def create_jsonrpc_error(message, error, error_code):
     :returns: A jsonrpc structure.
     :rtype: dict
     """
-    LOGGER.error('Error dealing with: "{}"'.format(message))
+    LOGGER.error('Error dealing with: "%s"', message)
     response = create_jsonrpc_response(
         message['id'], error=error,
         error_code=error_code)
-    LOGGER.debug('Returning: {}'.format(response))
+    LOGGER.debug('Returning: %s', response)
     return response
 
 

@@ -96,7 +96,7 @@ class Dispatcher:
         }
         self._bus = Bus(**bus_init_kwargs)
         self.logger.debug(
-            'Bus instance created with: {}'.format(bus_init_kwargs))
+            'Bus instance created with: %s', bus_init_kwargs)
         self._bus.connect()
         self.logger.info('Bus connection ready.')
 
@@ -111,8 +111,7 @@ class Dispatcher:
                     if isinstance(attr, BasicHandler):
                         self._handler_map[mod_path] = attr
                         self.logger.info(
-                            'Loaded function handler {} to {}'.format(
-                                mod_path, attr))
+                            'Loaded function handler %s to %s', mod_path, attr)
                     elif (isclass(attr) and issubclass(attr, object) and
                             not issubclass(attr, BasicHandler)):
                         handler_instance = attr()
@@ -122,12 +121,11 @@ class Dispatcher:
                             self._handler_map[key] = getattr(
                                 handler_instance, handler_meth)
                             self.logger.info(
-                                'Instantiated and loaded class handler '
-                                '{} to {}'.format(key, handler_instance))
+                                'Instantiated and loaded class '
+                                'handler %s to %s', key, handler_instance)
                     else:
                         self.logger.debug(
-                            '{} can not be used as a handler.'.format(
-                                mod_path))
+                            '%s can not be used as a handler.', mod_path)
             except ImportError as error:
                 self.logger.error(
                     'Unable to import handler package "{}". {}: {}'.format(
@@ -175,13 +173,13 @@ class Dispatcher:
             else:
                 handler = self._handler_map.get(route_controller)
             self.logger.debug(
-                'Using controller {}->{}'.format(route_dict, handler))
+                'Using controller %s->%s', route_dict, handler)
 
             return handler(environ, start_response)
         except Exception as error:
             self.logger.error(
-                'Exception raised in handler {}:\n{}'.format(
-                    route_controller, traceback.format_exc()))
+                'Exception raised in handler %s:\n%s',
+                route_controller, traceback.format_exc())
             start_response(
                 '500 Internal Server Error',
                 [('content-type', 'text/html')])

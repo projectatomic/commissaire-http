@@ -58,8 +58,7 @@ class Authenticator:
         # The plugin is handling it's own response
         if fake_start_response.call_count > 0:
             self.logger.debug(
-                '{} owned status code: {}'.format(
-                    self.__name, fake_start_response))
+                '%s owned status code: %s', self.__name, fake_start_response)
 
             # If the code returned is a 2xx then it's successful authn
             if fake_start_response.code.startswith('2'):
@@ -79,12 +78,11 @@ class Authenticator:
             return result
 
         elif result is True:
-            self.logger.debug('{} successfully authenticated.'.format(
-                self.__name))
+            self.logger.debug('%s successfully authenticated.', self.__name)
             return self._app(environ, start_response)
 
         # Fall through to a generic forbidden
-        self.logger.debug('{} failed authentication.'.format(self.__name))
+        self.logger.debug('%s failed authentication.', self.__name)
         start_response(
             '403 Forbidden', [('content-type', 'text/html')])
         return [bytes('Forbidden', 'utf8')]
@@ -146,23 +144,26 @@ class AuthenticationManager:
             result = authenticator.authenticate(environ, fake_start_response)
             # True means it was successful
             if result is True:
-                self.logger.debug('{} succeeded authentication.'.format(
-                    authenticator.__class__.__name__))
+                self.logger.debug(
+                    '%s succeeded authentication.',
+                    authenticator.__class__.__name__)
                 return self._app(environ, start_response)
             # The plugin handled it's own start_response and
             # return data. Pull from the fake_start_response and return
             # the result from authenticate.
             elif isinstance(
                     result, list) and fake_start_response.call_count > 0:
-                self.logger.debug('{} succeeded authentication.'.format(
-                    authenticator.__class__.__name__))
-                self.logger.debug('Response: {}'.format(fake_start_response))
+                self.logger.debug(
+                    '%s succeeded authentication.',
+                    authenticator.__class__.__name__)
+                self.logger.debug('Response: %s', fake_start_response)
                 start_response(
                     fake_start_response.code, fake_start_response.headers)
                 return result
             else:
-                self.logger.debug('{} failed authentication: {}'.format(
-                    authenticator.__class__.__name__, result))
+                self.logger.debug(
+                    '%s failed authentication: %s',
+                    authenticator.__class__.__name__, result)
 
         # Else fall through to a generic Forbidden.
         start_response(
@@ -187,7 +188,7 @@ def decode_basic_auth(logger, http_auth):
                 decoded = tuple(base64.decodebytes(
                     http_auth[6:].encode('utf-8')).decode().split(':'))
                 if logger:
-                    logger.debug('Credentials given: {0}'.format(decoded))
+                    logger.debug('Credentials given: %s', decoded)
                 return decoded
             except base64.binascii.Error:
                 if logger:

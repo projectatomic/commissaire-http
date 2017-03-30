@@ -116,14 +116,13 @@ def create_container_manager(message, bus):
     """
     try:
         name = message['params']['name']
-        LOGGER.debug('create_container_manager params: {}'.format(
-            message['params']))
+        LOGGER.debug('create_container_manager params: %s', message['params'])
         # Check to see if we already have a network with that name
         input_cmc = models.ContainerManagerConfig.new(**message['params'])
         saved_cmc = bus.storage.get(input_cmc)
         LOGGER.debug(
-            'Creation of already exisiting ContainerManagerConfig '
-            '"{}" requested.'.format(name))
+            'Creation of already exisiting '
+            'ContainerManagerConfig "%s" requested.', name)
 
         # If they are the same thing then go ahead and return success
         if saved_cmc.to_dict() == input_cmc.to_dict():
@@ -137,8 +136,8 @@ def create_container_manager(message, bus):
             JSONRPC_ERRORS['CONFLICT'])
     except _bus.StorageLookupError as error:
         LOGGER.info(
-            'Attempting to create new ContainerManagerConfig: "{}"'.format(
-                message['params']))
+            'Attempting to create new ContainerManagerConfig: "%s"',
+            message['params'])
 
     # Create the new ContainerManagerConfig
     try:
@@ -164,15 +163,15 @@ def delete_container_manager(message, bus):
     """
     try:
         name = message['params']['name']
-        LOGGER.debug('Attempting to delete ContainerManagerConfig "{}"'.format(
-            name))
+        LOGGER.debug('Attempting to delete ContainerManagerConfig "%s"', name)
         bus.storage.delete(models.ContainerManagerConfig.new(name=name))
         return create_jsonrpc_response(message['id'], [])
     except _bus.StorageLookupError as error:
         return create_jsonrpc_error(
             message, error, JSONRPC_ERRORS['NOT_FOUND'])
     except Exception as error:
-        LOGGER.debug('Error deleting ContainerManagerConfig: {}: {}'.format(
-            type(error), error))
+        LOGGER.debug(
+            'Error deleting ContainerManagerConfig: %s: %s',
+            type(error), error)
         return create_jsonrpc_error(
             message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])

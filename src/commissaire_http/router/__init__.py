@@ -80,8 +80,8 @@ class Router(Mapper):
         :rtype: dict or None
         """
         self.logger.debug(
-            'Executing routes.Mapper.route with: args={}, kwargs={}'.format(
-                args, kwargs))
+            'Executing routes.Mapper.route with: args=%s, kwargs=%s',
+            args, kwargs)
         result = super(Router, self).match(*args, **kwargs)
-        self.logger.debug('Router result: {}'.format(result))
+        self.logger.debug('Router result: %s', result)
         return result

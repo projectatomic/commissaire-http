@@ -93,8 +93,8 @@ def get_cluster_deploy(message, bus):
         return create_jsonrpc_response(
             message['id'], cluster_deploy.to_dict_safe())
     except models.ValidationError as error:
-        LOGGER.info('Invalid data retrieved. "{}"'.format(error))
-        LOGGER.debug('Data="{}"'.format(message['params']))
+        LOGGER.info('Invalid data retrieved. "%s"', error)
+        LOGGER.debug('Data="%s"', message['params'])
         return create_jsonrpc_error(
             message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
     except _bus.StorageLookupError as error:
@@ -129,13 +129,13 @@ def create_cluster_deploy(message, bus):
                 cluster_deploy.version])
         return create_jsonrpc_response(message['id'], result['result'])
     except models.ValidationError as error:
-        LOGGER.info('Invalid data provided. "{}"'.format(error))
-        LOGGER.debug('Data="{}"'.format(message['params']))
+        LOGGER.info('Invalid data provided. "%s"', error)
+        LOGGER.debug('Data="%s"', message['params'])
         return create_jsonrpc_error(
             message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
     except Exception as error:
-        LOGGER.debug('Error creating ClusterDeploy: {}: {}'.format(
-            type(error), error))
+        LOGGER.debug(
+            'Error creating ClusterDeploy: %s: %s', type(error), error)
         return create_jsonrpc_error(
             message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
 
@@ -222,16 +222,16 @@ def get_cluster_operation(model_cls, message, bus):
 
         return create_jsonrpc_response(message['id'], model.to_dict_safe())
     except models.ValidationError as error:
-        LOGGER.info('Invalid data retrieved. "{}"'.format(error))
-        LOGGER.debug('Data="{}"'.format(message['params']))
+        LOGGER.info('Invalid data retrieved. "%s"', error)
+        LOGGER.debug('Data="%s"', message['params'])
         return create_jsonrpc_error(
             message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
     except _bus.StorageLookupError as error:
         return create_jsonrpc_error(
             message, error, JSONRPC_ERRORS['NOT_FOUND'])
     except Exception as error:
-        LOGGER.debug('Error getting {}: {}: {}'.format(
-            model_cls.__name__, type(error), error))
+        LOGGER.debug(
+            'Error getting %s: %s: %s', model_cls.__name__, type(error), error)
         return create_jsonrpc_error(
             message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
 
@@ -256,7 +256,7 @@ def create_cluster_operation(model_cls, message, bus, routing_key):
     cluster_name = message['params']['name']
     try:
         bus.storage.get_cluster(cluster_name)
-        LOGGER.debug('Found cluster "{}"'.format(cluster_name))
+        LOGGER.debug('Found cluster "%s"', cluster_name)
     except:
         error_msg = 'Cluster "{}" does not exist.'.format(cluster_name)
         LOGGER.debug(error_msg)
@@ -273,12 +273,13 @@ def create_cluster_operation(model_cls, message, bus, routing_key):
         result = bus.request(routing_key, params=[cluster_name])
         return create_jsonrpc_response(message['id'], result['result'])
     except models.ValidationError as error:
-        LOGGER.info('Invalid data provided. "{}"'.format(error))
-        LOGGER.debug('Data="{}"'.format(message['params']))
+        LOGGER.info('Invalid data provided. "%s"', error)
+        LOGGER.debug('Data="%s"', message['params'])
         return create_jsonrpc_error(
             message, error, JSONRPC_ERRORS['INVALID_REQUEST'])
     except Exception as error:
-        LOGGER.debug('Error creating {}: {}: {}'.format(
-            model_cls.__name__, type(error), error))
+        LOGGER.debug(
+            'Error creating %s: %s: %s',
+            model_cls.__name__, type(error), error)
         return create_jsonrpc_error(
             message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])

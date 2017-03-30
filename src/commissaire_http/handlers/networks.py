@@ -118,13 +118,12 @@ def create_network(message, bus):
     """
     try:
         name = message['params']['name']
-        LOGGER.debug('create_network params: {}'.format(message['params']))
+        LOGGER.debug('create_network params: %s', message['params'])
         # Check to see if we already have a network with that name
         input_network = models.Network.new(**message['params'])
         saved_network = bus.storage.get(input_network)
         LOGGER.debug(
-            'Creation of already exisiting network "{0}" requested.'.format(
-                name))
+            'Creation of already exisiting network "%s" requested.', name)
 
         # If they are the same thing then go ahead and return success
         if saved_network.to_dict() == input_network.to_dict():
@@ -137,8 +136,8 @@ def create_network(message, bus):
             'A network with that name already exists.',
             JSONRPC_ERRORS['CONFLICT'])
     except _bus.StorageLookupError as error:
-        LOGGER.info('Attempting to create new network: "{}"'.format(
-            message['params']))
+        LOGGER.info(
+            'Attempting to create new network: "%s"', message['params'])
 
     # Create the new network
     try:
@@ -165,14 +164,13 @@ def delete_network(message, bus):
     """
     try:
         name = message['params']['name']
-        LOGGER.debug('Attempting to delete network "{}"'.format(name))
+        LOGGER.debug('Attempting to delete network "%s"', name)
         bus.storage.delete(models.Network.new(name=name))
         return create_jsonrpc_response(message['id'], [])
     except _bus.StorageLookupError as error:
         return create_jsonrpc_error(
             message, error, JSONRPC_ERRORS['NOT_FOUND'])
     except Exception as error:
-        LOGGER.debug('Error deleting network: {}: {}'.format(
-            type(error), error))
+        LOGGER.debug('Error deleting network: %s: %s', type(error), error)
         return create_jsonrpc_error(
             message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])

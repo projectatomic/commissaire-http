@@ -183,10 +183,10 @@ class CommissaireHttpServer:
                 ssl_version=ssl.PROTOCOL_TLSv1_2,
                 server_side=True,
                 **client_side_cert_kwargs)
-            self.logger.info('Using TLS with {}'.format(self._tls_pem_file))
+            self.logger.info('Using TLS with %s', self._tls_pem_file)
 
-        self.logger.debug('Created httpd server: {}:{}'.format(
-            self._bind_host, self._bind_port))
+        self.logger.debug(
+            'Created httpd server: %s:%s', self._bind_host, self._bind_port)
 
     def serve_forever(self):
         """
@@ -195,5 +195,4 @@ class CommissaireHttpServer:
         try:
             self._httpd.serve_forever()
         except Exception as error:
-            self.logger.error('Server shut down {}: {}'.format(
-                type(error), error))
+            self.logger.error('Server shut down %s: %s', type(error), error)

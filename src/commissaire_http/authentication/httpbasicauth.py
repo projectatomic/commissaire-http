@@ -86,7 +86,7 @@ class HTTPBasicAuth(Authenticator):
         except (ValueError, IOError) as error:
             self.logger.warn(
                 'Denying all access due to problem parsing '
-                'JSON file: {0}'.format(error))
+                'JSON file: %s', error)
 
     def check_authentication(self, user, passwd):
         """
@@ -107,9 +107,7 @@ class HTTPBasicAuth(Authenticator):
         try:
             if bcrypt.hashpw(passwd.encode('utf-8'), hashed) == hashed:
                 self.logger.debug(
-                    'The provided hash for user {0} '
-                    'matched: {1}'.format(user, passwd))
-
+                    'The provided hash for user %s matched: %s', user, passwd)
                 valid = True
         except ValueError:
             pass  # Bad salt
@@ -132,7 +130,7 @@ class HTTPBasicAuth(Authenticator):
             environ.get('HTTP_AUTHORIZATION'))
         if user is not None and passwd is not None:
             if user in self._data.keys():
-                self.logger.debug('User {0} found in datastore.'.format(user))
+                self.logger.debug('User %s found in datastore.', user)
                 if self.check_authentication(user, passwd):
                     return True  # Authentication is good
 

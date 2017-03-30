@@ -135,8 +135,8 @@ def update_new_cluster_member_status(bus, cluster, *hosts):
                 host.status = C.HOST_STATUS_ACTIVE
         except Exception as error:
             LOGGER.warn(
-                'Unable to register {} to container manager "{}": {}'.format(
-                    host.address, cluster.container_manager, error.args[0]))
+                'Unable to register %s to container manager "%s": %s',
+                host.address, cluster.container_manager, error.args[0])
             raise error
 
     # Save the updated host models.
@@ -216,8 +216,7 @@ def create_cluster(message, bus):
         name = message['params']['name']
         bus.storage.get_cluster(name)
         LOGGER.debug(
-            'Creation of already exisiting cluster {0} requested.'.format(
-                name))
+            'Creation of already exisiting cluster %s requested.', name)
     except Exception as error:
         LOGGER.debug('Brand new cluster being created.')
 
@@ -252,7 +251,7 @@ def delete_cluster(message, bus):
     """
     try:
         name = message['params']['name']
-        LOGGER.debug('Attempting to delete cluster "{}"'.format(name))
+        LOGGER.debug('Attempting to delete cluster "%s"', name)
         cluster = bus.storage.get_cluster(name)
         if cluster.container_manager:
             params = [cluster.container_manager]
@@ -263,7 +262,7 @@ def delete_cluster(message, bus):
         return create_jsonrpc_error(
             message, error, JSONRPC_ERRORS['NOT_FOUND'])
     except Exception as error:
-        LOGGER.debug('Error deleting cluster: {}: {}'.format(
+        LOGGER.debug('Error deleting cluster: %s: %s'.format(
             type(error), error))
         return create_jsonrpc_error(
             message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
@@ -284,16 +283,15 @@ def list_cluster_members(message, bus):
     try:
         name = message['params']['name']
         cluster = bus.storage.get_cluster(name)
-        LOGGER.debug('Cluster found: {}'.format(cluster.name))
-        LOGGER.debug('Returning: {}'.format(cluster.hostset))
+        LOGGER.debug('Cluster found: %s', cluster.name)
+        LOGGER.debug('Returning: %s', cluster.hostset)
         return create_jsonrpc_response(
             message['id'], result=cluster.hostset)
     except _bus.StorageLookupError as error:
         return create_jsonrpc_error(
             message, error, JSONRPC_ERRORS['NOT_FOUND'])
     except Exception as error:
-        LOGGER.debug('Error listing cluster: {}: {}'.format(
-            type(error), error))
+        LOGGER.debug('Error listing cluster: %s: %s', type(error), error)
         return create_jsonrpc_error(
             message, error, JSONRPC_ERRORS['INTERNAL_ERROR'])
 
@@ -313,8 +311,7 @@ def update_cluster_members(message, bus):
     try:
         old_hosts = set(message['params']['old'])  # Ensures no duplicates
         new_hosts = set(message['params']['new'])  # Ensures no duplicates
-        LOGGER.debug('old_hosts="{}", new_hosts="{}"'.format(
-            old_hosts, new_hosts))
+        LOGGER.debug('old_hosts="%s", new_hosts="%s"', old_hosts, new_hosts)
     except Exception as error:
         return create_jsonrpc_error(
             message, error, JSONRPC_ERRORS['BAD_REQUEST'])
@@ -327,7 +324,7 @@ def update_cluster_members(message, bus):
             message, error, JSONRPC_ERRORS['NOT_FOUND'])
 
     if old_hosts != set(cluster.hostset):
-        msg = 'Conflict setting hosts for cluster {0}'.format(name)
+        msg = 'Conflict setting hosts for cluster {}'.format(name)
         LOGGER.error(msg)
         return create_jsonrpc_error(message, msg, JSONRPC_ERRORS['CONFLICT'])
 
@@ -338,8 +335,8 @@ def update_cluster_members(message, bus):
     # Rejecting existing cluster members would be surprising to users.
     actual_new_hosts = new_hosts.difference(old_hosts)
     LOGGER.debug(
-        'Checking status of new hosts (ignoring existing): '
-        '{}'.format(', '.join(actual_new_hosts)))
+        'Checking status of new hosts (ignoring existing): %s',
+        ', '.join(actual_new_hosts))
     list_of_hosts = bus.storage.get_many(
         [models.Host.new(address=x) for x in actual_new_hosts])
     hosts_not_ready = [host.address for host in list_of_hosts
