@@ -91,8 +91,8 @@ def main():
 
         # Serve until we are killed off
         server.serve_forever()
-    except KeyboardInterrupt:  # pragma: no cover
-        pass
+    except KeyboardInterrupt as err:  # pragma: no cover
+        server.logger.fatal('Received KeyboardInterrupt. Exiting ...')
     except ImportError:
         parser.error('Could not import "{}" for authentication'.format(
             args.authentication_plugins))
