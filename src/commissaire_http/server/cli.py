@@ -26,19 +26,19 @@ from commissaire_http.server.routing import DISPATCHER  # noqa
 from commissaire_http import CommissaireHttpServer, parse_args
 
 
-def inject_authentication(plugins):
+def inject_authentication(plugins, self_auths=None):
     """
     Injects authentication into the dispatcher's dispatch method.
 
     :param plugin: Name of the Authenticator plugin.
     :type plugin: str
-    :param kwargs: Arguments for the Authenticator
-    :type kwargs: dict or list
+    :param self_auths: Paths that provide their own authentication.
+    :type self_auths: None or [str]
     :returns: A wrapped Dispatcher instance
     :rtype: commissaire.dispatcher.Dispatcher
     """
     global DISPATCHER
-    authn_manager = AuthenticationManager(DISPATCHER.dispatch)
+    authn_manager = AuthenticationManager(DISPATCHER.dispatch, self_auths)
     for module_name in plugins:
         authentication_class = import_plugin(
             module_name, 'commissaire_http.authentication', Authenticator)
@@ -73,7 +73,9 @@ def main():
 
     try:
         # Inject the authentication plugin
-        DISPATCHER = inject_authentication(args.authentication_plugins)
+        DISPATCHER = inject_authentication(
+            args.authentication_plugins,
+            args.self_auths)
 
         # Connect to the bus
         DISPATCHER.setup_bus(

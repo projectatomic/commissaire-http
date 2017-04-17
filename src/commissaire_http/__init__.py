@@ -73,6 +73,9 @@ def parse_args(parser):
         metavar='MODULE_NAME:key=value,..', type=parse_to_struct,
         help=('Authentication Plugin module and configuration.'))
     parser.add_argument(
+        '--self-auth', action='append', dest='self_auths',
+        help='URI paths which provide their own authentication.')
+    parser.add_argument(
         '--bus-exchange', type=str, default='commissaire',
         help='Message bus exchange name.')
     parser.add_argument(

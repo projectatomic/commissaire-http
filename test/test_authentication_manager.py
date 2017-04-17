@@ -43,7 +43,8 @@ class Test_AuthenticationManager(TestCase):
         self.authenticator = authentication.Authenticator(dummy_wsgi_app)
         self.authentication_manager = authentication.AuthenticationManager(
             dummy_wsgi_app,
-            authenticators=[self.authenticator])
+            authenticators=[self.authenticator],
+            self_auths=['/passthrough'])
 
     def test_authentication_manager_simple_deny(self):
         """
@@ -159,4 +160,14 @@ class Test_AuthenticationManager(TestCase):
         ]
         result = self.authentication_manager(create_environ(), start_response)
         self.assertEquals(expected_result, result)
+        start_response.assert_called_once_with('200 OK', mock.ANY)
+
+    def test_authentication_self_auths(self):
+        """
+        Verify AuthenticationManager passes self_auths without checking.
+        """
+        start_response = mock.MagicMock()
+        result = self.authentication_manager(
+            create_environ(path='/passthrough'), start_response)
+        self.assertEquals(DUMMY_WSGI_BODY, result)
         start_response.assert_called_once_with('200 OK', mock.ANY)

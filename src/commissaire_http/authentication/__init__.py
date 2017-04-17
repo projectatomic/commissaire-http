@@ -110,17 +110,20 @@ class AuthenticationManager:
     #: Logger for AuthenticationManager
     logger = logging.getLogger('AuthenticationManager')
 
-    def __init__(self, app, authenticators=[]):
+    def __init__(self, app, authenticators=None, self_auths=None):
         """
         Initializes a new AuthenticationManager instance.
 
         :param app: A WSGI app to wrap.
         :type app: instance
         :param authenticators: Configured Authenticator instances to utilize.
-        :type authenticators: list
+        :type authenticators: None or list
+        :param self_auths: Paths that provide their own authentication.
+        :type self_auths: None or [str]
         """
         self._app = app
-        self.authenticators = authenticators
+        self.authenticators = authenticators or []
+        self.self_auths = self_auths or []
 
     def __call__(self, environ, start_response):
         """
@@ -134,6 +137,14 @@ class AuthenticationManager:
         :returns: Response back to requestor.
         :rtype: list
         """
+        # If the endpoint self authenticates then pass directly
+        # to the handler
+        if environ['PATH_INFO'] in self.self_auths:
+            self.logger.debug(('%s is in the self_auths list. '
+                               'Passing directly to the endpoint.'),
+                              environ['PATH_INFO'])
+            return self._app(environ, start_response)
+
         # Create the fake start_response instance
         fake_start_response = FakeStartResponse()
 
