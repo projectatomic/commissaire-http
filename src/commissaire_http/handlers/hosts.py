@@ -137,6 +137,7 @@ def create_host(message, bus):
     # If a cluster if provided, grab it from storage
     cluster_data = {}
     cluster_name = message['params'].get('cluster')
+
     if cluster_name:
         cluster = _does_cluster_exist(bus, cluster_name)
         if not cluster:
@@ -149,9 +150,11 @@ def create_host(message, bus):
     try:
         host = bus.storage.get_host(address)
         LOGGER.debug('Host "%s" already exisits.', address)
+        host_creds = bus.storage.get(models.HostCreds.new(address=address))
 
         # Verify the keys match
-        if host.ssh_priv_key != message['params'].get('ssh_priv_key', ''):
+        if host_creds.ssh_priv_key != message['params'].get(
+                'ssh_priv_key', ''):
             return create_jsonrpc_error(
                 message, 'Host already exists', JSONRPC_ERRORS['CONFLICT'])
 
@@ -178,6 +181,16 @@ def create_host(message, bus):
                 'Saved host "%s" to cluster "%s"', address, cluster_name)
 
     try:
+        cred_defaults = models.HostCreds._attribute_defaults
+        creds_params = {
+            'address': address,
+            'ssh_priv_key': message['params'].pop(
+                'ssh_priv_key', cred_defaults['ssh_priv_key']),
+            'remote_user': message['params'].pop(
+                'remote_user', cred_defaults['remote_user'])
+
+        }
+        host_creds = bus.storage.save(models.HostCreds.new(**creds_params))
         host = bus.storage.save(models.Host.new(**message['params']))
 
         # pass this off to the investigator
@@ -213,6 +226,11 @@ def delete_host(message, bus):
         address = message['params']['address']
         LOGGER.debug('Attempting to delete host "%s"', address)
         bus.storage.delete(models.Host.new(address=address))
+        # Remove creds
+        try:
+            bus.storage.delete(models.HostCreds.new(address=address))
+        except _bus.RemoteProcedureCallError as error:
+            LOGGER.info('Unable to remove HostCreds for %s', address)
         # TODO: kick off service job to remove the host?
 
         try:
@@ -262,12 +280,8 @@ def get_hostcreds(message, bus):
     """
     try:
         address = message['params']['address']
-        host = bus.storage.get_host(address)
-        creds = {
-            'remote_user': host.remote_user,
-            'ssh_priv_key': host.ssh_priv_key
-        }
-        return create_jsonrpc_response(message['id'], creds)
+        host_creds = bus.storage.get(models.HostCreds.new(address=address))
+        return create_jsonrpc_response(message['id'], host_creds)
     except _bus.RemoteProcedureCallError as error:
         LOGGER.debug(
             'Client requested a non-existant host: "%s"', address)
