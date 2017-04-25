@@ -1,3 +1,12 @@
+# commissaire-http v0.0.4
+```
+* f7025cf: auth: Add self-auth option
+* c44e27e: logging: Switch to lazy string formatting
+* 1c718a8: server: Catch KeyboardInterrupt and log exit
+* 979bd77: handlers: Avoid to_dict_with_hosts().
+* fabb43d: Post-release version bump.
+```
+
 # commissaire-http v0.0.3
 ```
 * 087c646: Use new host status constants.
