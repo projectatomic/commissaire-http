@@ -48,7 +48,7 @@ test_require = extract_requirements('test-requirements.txt')
 
 setup(
     name='commissaire_http',
-    version='0.0.4',
+    version='0.0.5',
     description='Commissaire HTTP Endpoint',
     author=extract_names('CONTRIBUTORS'),
     maintainer=extract_names('MAINTAINERS'),
