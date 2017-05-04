@@ -38,7 +38,8 @@ def inject_authentication(plugins, self_auths=None):
     :rtype: commissaire.dispatcher.Dispatcher
     """
     global DISPATCHER
-    authn_manager = AuthenticationManager(DISPATCHER.dispatch, self_auths)
+    authn_manager = AuthenticationManager(
+        DISPATCHER.dispatch, self_auths=self_auths)
     for module_name in plugins:
         authentication_class = import_plugin(
             module_name, 'commissaire_http.authentication', Authenticator)
