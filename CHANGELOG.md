@@ -1,3 +1,9 @@
+# commissaire-http v0.0.5
+```
+* 366ea4b: auth: Use keyword argument for self-auths
+* 6ae6966: Post-release version bump.
+```
+
 # commissaire-http v0.0.4
 ```
 * f7025cf: auth: Add self-auth option
