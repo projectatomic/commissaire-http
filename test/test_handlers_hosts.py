@@ -331,7 +331,7 @@ class Test_hosts(TestCase):
         Verify get_hostcreds responds with the right information.
         """
         bus = mock.MagicMock()
-        bus.storage.get.return_value = HOST_CREDS
+        bus.storage.get.return_value = HostCreds.new(**HOST_CREDS)
         self.assertEquals(
             create_jsonrpc_response(ID, HOST_CREDS),
             hosts.get_hostcreds.handler(SIMPLE_HOST_REQUEST, bus))

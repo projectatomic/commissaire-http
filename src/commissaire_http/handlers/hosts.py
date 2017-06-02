@@ -281,7 +281,8 @@ def get_hostcreds(message, bus):
     try:
         address = message['params']['address']
         host_creds = bus.storage.get(models.HostCreds.new(address=address))
-        return create_jsonrpc_response(message['id'], host_creds)
+        return create_jsonrpc_response(
+            message['id'], host_creds.to_dict_safe())
     except _bus.RemoteProcedureCallError as error:
         LOGGER.debug(
             'Client requested a non-existant host: "%s"', address)
