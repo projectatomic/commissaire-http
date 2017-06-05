@@ -75,6 +75,13 @@ class Dispatcher:
         self.reload_handlers()
         self._bus = None
 
+    @property
+    def router(self):
+        """
+        Get the router instance.
+        """
+        return self._router
+
     def setup_bus(self, exchange_name, connection_url, qkwargs):
         """
         Sets up a bus connection with the given configuration.

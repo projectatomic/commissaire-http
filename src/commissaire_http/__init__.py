@@ -21,6 +21,7 @@ import logging
 
 from argparse import Namespace
 from socketserver import ThreadingMixIn
+from routes.middleware import RoutesMiddleware
 from wsgiref.simple_server import WSGIServer, WSGIRequestHandler, make_server
 
 from commissaire.util.config import read_config_file
@@ -164,7 +165,9 @@ class CommissaireHttpServer:
         self._httpd = make_server(
             self._bind_host,
             self._bind_port,
-            self.dispatcher.dispatch,
+            RoutesMiddleware(
+                self.dispatcher.dispatch,
+                self.dispatcher.router),
             server_class=ThreadedWSGIServer,
             handler_class=CommissaireRequestHandler)
 
