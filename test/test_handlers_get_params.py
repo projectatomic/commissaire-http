@@ -40,7 +40,10 @@ class Test_get_params(TestCase):
         environ = {
             'PATH_INFO': '/test/',
             'REQUEST_METHOD': 'GET',
-            'commissaire.routematch': (route_dict, route)
+
+            # RoutesMiddleware inserts this.
+            'wsgiorg.routing_args': ((), route_dict),
+            'routes.route': route
         }
         self.assertEquals(
             {'test': 'test'},
@@ -58,7 +61,10 @@ class Test_get_params(TestCase):
             'PATH_INFO': '/test/',
             'QUERY_STRING': 'from=querystring',
             'REQUEST_METHOD': 'GET',
-            'commissaire.routematch': (route_dict, route)
+
+            # RoutesMiddleware inserts this.
+            'wsgiorg.routing_args': ((), route_dict),
+            'routes.route': route
         }
         self.assertEquals(
             {'from': 'querystring'},
@@ -77,7 +83,10 @@ class Test_get_params(TestCase):
             'REQUEST_METHOD': 'PUT',
             'CONTENT_LENGTH': 16,
             'wsgi.input': BytesIO(b'{"from": "wsgi"}'),
-            'commissaire.routematch': (route_dict, route)
+
+            # RoutesMiddleware inserts this.
+            'wsgiorg.routing_args': ((), route_dict),
+            'routes.route': route
         }
         self.assertEquals(
             {'from': 'wsgi'},

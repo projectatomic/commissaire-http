@@ -59,8 +59,11 @@ def get_params(environ):
     :returns: A parameter dictionary.
     :rtype: dict
     """
-    route_dict, route = environ['commissaire.routematch']
     param_dict = {}
+
+    # Set by RoutesMiddleware.
+    route = environ['routes.route']
+    route_dict = environ['wsgiorg.routing_args'][1]
 
     # Initial parameters come from the urllib.
     for param_key in route.minkeys:
@@ -138,7 +141,9 @@ class JSONRPC_Handler(BasicHandler):
         """
 
         bus = environ['commissaire.bus']
-        route_dict, route = environ['commissaire.routematch']
+
+        # Set by RoutesMiddleware.
+        route_dict = environ['wsgiorg.routing_args'][1]
 
         # Extract request parameters.
         param_dict = get_params(environ)

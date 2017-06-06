@@ -22,6 +22,8 @@ from io import BytesIO
 
 from . import TestCase, mock
 
+import commissaire_http.handlers
+
 from commissaire_http.bus import Bus
 from commissaire_http.dispatcher import Dispatcher
 from commissaire_http.router import Router
@@ -71,9 +73,15 @@ class TestDispatcher(TestCase):
         """
         Verify the Dispatcher.dispatch works with valid paths.
         """
+        match = {'controller': commissaire_http.handlers.hello_world}
+        route = mock.MagicMock(minkeys=[])
         environ = {
             'PATH_INFO': '/hello/',
             'REQUEST_METHOD': 'GET',
+
+            # RoutesMiddleware inserts this.
+            'wsgiorg.routing_args': ((), match),
+            'routes.route': route
         }
         start_response = mock.MagicMock()
         result = self.dispatcher_instance.dispatch(environ, start_response)
@@ -84,10 +92,16 @@ class TestDispatcher(TestCase):
         """
         Verify the Dispatcher.dispatch works with valid paths and params.
         """
+        match = {'controller': commissaire_http.handlers.hello_world}
+        route = mock.MagicMock(minkeys=[])
         environ = {
             'PATH_INFO': '/hello/',
             'REQUEST_METHOD': 'GET',
-            'QUERY_STRING': 'name=bob'
+            'QUERY_STRING': 'name=bob',
+
+            # RoutesMiddleware inserts this.
+            'wsgiorg.routing_args': ((), match),
+            'routes.route': route
         }
         start_response = mock.MagicMock()
         result = self.dispatcher_instance.dispatch(environ, start_response)
@@ -98,11 +112,17 @@ class TestDispatcher(TestCase):
         """
         Verify the Dispatcher.dispatch works when wsgi_input is in use.
         """
+        match = {'controller': commissaire_http.handlers.create_world}
+        route = mock.MagicMock(minkeys=[])
         environ = {
             'PATH_INFO': '/world/',
             'REQUEST_METHOD': 'PUT',  # PUT uses wsgi.input
             'wsgi.input': BytesIO(b'{"name": "world"}'),
             'CONTENT_LENGTH': b'18',
+
+            # RoutesMiddleware inserts this.
+            'wsgiorg.routing_args': ((), match),
+            'routes.route': route
         }
         start_response = mock.MagicMock()
         result = self.dispatcher_instance.dispatch(environ, start_response)
@@ -116,6 +136,9 @@ class TestDispatcher(TestCase):
         environ = {
             'PATH_INFO': '/idonotexist/',
             'REQUEST_METHOD': 'GET',
+
+            # RoutesMiddleware inserts this.
+            'routes.route': None
         }
         start_response = mock.MagicMock()
         result = self.dispatcher_instance.dispatch(environ, start_response)

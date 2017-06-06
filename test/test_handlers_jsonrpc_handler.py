@@ -37,7 +37,10 @@ class Test_JSONRPC_Handler(TestCase):
         self.environ = {
             'REQUEST_METHOD': 'GET',
             'commissaire.bus': mock.MagicMock(),
-            'commissaire.routematch': (self.route_dict, mock.MagicMock())
+
+            # RoutesMiddleware inserts this.
+            'wsgiorg.routing_args': ((), self.route_dict),
+            'routes.route': mock.MagicMock()
         }
         self.start_response = mock.MagicMock()
         self.json_result = {

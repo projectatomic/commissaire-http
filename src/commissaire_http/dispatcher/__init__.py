@@ -160,16 +160,14 @@ class Dispatcher:
         # Add the bus instance to the WSGI environment dictionary.
         environ['commissaire.bus'] = self._bus
 
-        # Add the routematch results to the WSGI environment dictionary.
-        match_result = self._router.routematch(environ['PATH_INFO'], environ)
-        if match_result is None:
+        # Set by RoutesMiddleware.
+        if environ.get('routes.route') is None:
             start_response(
                 '404 Not Found',
                 [('content-type', 'text/html')])
             return [bytes('Not Found', 'utf8')]
-        environ['commissaire.routematch'] = match_result
 
-        route_dict = match_result[0]
+        route_dict = environ['wsgiorg.routing_args'][1]
         route_controller = route_dict['controller']
 
         try:
