@@ -105,7 +105,11 @@ class HTTPBasicAuth(Authenticator):
         valid = False
         hashed = self._data[user]['hash']
         try:
-            if bcrypt.hashpw(passwd.encode('utf-8'), hashed) == hashed:
+            encoded_passwd = passwd.encode('utf-8')
+            encoded_hashed = hashed.encode('utf-8')
+            # The salt is embedded in the hash string, which allows
+            # the full hash string to be passed as the salt argument.
+            if bcrypt.hashpw(encoded_passwd, encoded_hashed) == encoded_hashed:
                 self.logger.debug(
                     'The provided hash for user %s matched: %s', user, passwd)
                 valid = True
