@@ -1,4 +1,5 @@
 kombu #license=BSD
 routes[middleware] #license=MIT
+WebOb #license=MIT
 bcrypt #license=ASLv2
 git+https://github.com/projectatomic/commissaire.git #license=GPLv3
