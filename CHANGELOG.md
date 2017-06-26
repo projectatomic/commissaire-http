@@ -1,3 +1,19 @@
+# commissaire-http v
+Ignoring git+https://github.com/projectatomic/commissaire.git (-r requirements.txt (line 5))
+To install it run: pip install git+https://github.com/projectatomic/commissaire.git
+
+0.0.6
+```
+* dad5600: requirements.txt: Add WebOb.
+* 3488018: Require bcrypt instead of py-bcrypt.
+* 57b4c61: dispatcher: No need to call routematch() when using middleware.
+* 55db2df: Use routes.middleware.RoutesMiddleware.
+* 699f537: auth: Add OpenShift Bearer token auth
+* 7e50114: handlers: Return a dict from get_hostcreds().
+* 0cbd58c: handlers: Update for secret models
+* 846ab8e: Post-release version bump.
+```
+
 # commissaire-http v0.0.5
 ```
 * 366ea4b: auth: Use keyword argument for self-auths
